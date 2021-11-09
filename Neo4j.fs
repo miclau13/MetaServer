@@ -116,6 +116,30 @@ let getNodeLabel (node: Node) =
         | FVCOMInput _ -> nameof FVCOMInput
     label
 
+// 9/11/2021
+let getRelatedNodesByChecksum (checksum: string) =
+    let queryMatch = sprintf "(node)<-[]->(result)"
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .Where(fun node -> node.Checksum = checksum)
+            .Return(fun (result: Cypher.ICypherResultItem) -> result.As())
+            .ResultsAsync
+    let nodes =
+        result |> Async.AwaitTask |> Async.RunSynchronously
+    nodes
+
+let getNodesByLabel (label: string) =
+    let queryMatch = sprintf "(node: %s)" label
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .Return(fun (node: Cypher.ICypherResultItem) -> node.As())
+            .ResultsAsync
+    let nodes =
+        result |> Async.AwaitTask |> Async.RunSynchronously
+    nodes
+
 // 8/11/2021
 let getClientWithNodeInputParameter (client: Cypher.ICypherFluentQuery) (node: Node) = 
     match node with 
@@ -135,11 +159,9 @@ let getAllNodes () =
             .Match("(node)")
             .Return(fun (node: Cypher.ICypherResultItem) -> node.As())
             .ResultsAsync
-    let a =
+    let nodes =
         result |> Async.AwaitTask |> Async.RunSynchronously
-    for i in a do
-        printfn "nodes: %s" i
-    result
+    nodes
 
 let createNodeIfNotExist (node: Node) =
     let nodeAttributes = getNodeAttributes node

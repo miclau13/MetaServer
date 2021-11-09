@@ -27,12 +27,16 @@ and InitArgs =
 and ListArgs =
     | [<AltCommandLine("-a")>] All
     | [<AltCommandLine("-s")>] Start of msg:string
+    | [<AltCommandLine("-l")>] Label of msg:string
+    | [<AltCommandLine("-r")>] Relationship of msg:string
 
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | All -> "List all Grids."
             | Start _ -> "Use the given <start> as the starting date. "
+            | Label _ -> "Find the corresping nodes with the <label>. "
+            | Relationship _ -> "Find the Relationship of the node by <checksum>. "
 
 let runInit (runArgs: ParseResults<InitArgs>) =
     match runArgs with
@@ -46,24 +50,31 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 let runList (runArgs: ParseResults<ListArgs>) =
     match runArgs with
     | argz when argz.Contains(All) ->
-        // let allArgs = runArgs.GetResult(All)
-        // List all grid using Neo4j
-        // printfn "%A" "All Grids..."
-        // Neo4j.createMultipleInitGrids() |> ignore
-
-        // let result = Neo4j.createMultipleFiles()
-        // Neo4j.relateFile()
-        // Neo4j.deleteAllFiles
-        Neo4j.deleteDemoGrid ()
         let result = Neo4j.getAllNodes ()
-        // let result = "Done"
-        printfn "Result: %A " result
+        for i in result do
+            printfn "%s" i
         Ok ()
     | argz when argz.Contains(Start) ->
         // Get the start date 
         let startArgs = runArgs.GetResult(Start)
         // List all grid using Neo4j
         printfn "%A %A" "startArgs:" startArgs
+        Ok ()
+    | argz when argz.Contains(Label) ->
+        // Get the label
+        let labelArgs = runArgs.GetResult(Label)
+        // Get the nodes with specific label
+        let result = Neo4j.getNodesByLabel(labelArgs)
+        for i in result do
+            printfn "%s" i
+        Ok ()
+    | argz when argz.Contains(Relationship) ->
+        // Get the relationship
+        let checksum = runArgs.GetResult(Relationship)
+        // Get the nodes with specific relationship
+        let result = Neo4j.getRelatedNodesByChecksum(checksum)
+        for i in result do
+            printfn "%s" i
         Ok ()
     | _ -> 
         printfn "%s" "No argument provided"
