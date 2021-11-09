@@ -9,12 +9,21 @@ type CliError =
 type CmdArgs =
     | [<AltCommandLine("-p")>] Print of message:string
     | [<CliPrefix(CliPrefix.None)>] List of ParseResults<ListArgs>
+    | [<CliPrefix(CliPrefix.None)>] Init of ParseResults<InitArgs>
 with
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | Print _ -> "Print a message"
             | List _ -> "List file(s)"
+            | Init _ -> "Init nodes and relationships"
+and InitArgs =
+    | [<AltCommandLine("-a")>] All
+    interface IArgParserTemplate with
+        member this.Usage =
+            match this with
+            | All -> "Init all."
+
 and ListArgs =
     | [<AltCommandLine("-a")>] All
     | [<AltCommandLine("-s")>] Start of msg:string
@@ -25,18 +34,28 @@ and ListArgs =
             | All -> "List all Grids."
             | Start _ -> "Use the given <start> as the starting date. "
 
+let runInit (runArgs: ParseResults<InitArgs>) =
+    match runArgs with
+    | _ ->
+        Neo4j.deleteAllNodes()
+        let result = Neo4j.createInitNodesIfNotExist ()
+        printfn "Result: %A " result
+        Neo4j.relateInitNodes ()
+        Ok ()
+
 let runList (runArgs: ParseResults<ListArgs>) =
     match runArgs with
     | argz when argz.Contains(All) ->
         // let allArgs = runArgs.GetResult(All)
         // List all grid using Neo4j
         // printfn "%A" "All Grids..."
-        Neo4j.createIfNotExist()
+        // Neo4j.createMultipleInitGrids() |> ignore
 
         // let result = Neo4j.createMultipleFiles()
         // Neo4j.relateFile()
         // Neo4j.deleteAllFiles
-        let result = Neo4j.getAllFile()
+        Neo4j.deleteDemoGrid ()
+        let result = Neo4j.getAllNodes ()
         // let result = "Done"
         printfn "Result: %A " result
         Ok ()
@@ -69,6 +88,7 @@ let main argv =
     match parser.ParseCommandLine argv with
     | p when p.Contains(Print) -> runPrint (p.GetResult(Print))
     | p when p.Contains(List) -> runList (p.GetResult(List))
+    | p when p.Contains(Init) -> runInit (p.GetResult(Init))
     | _ ->
         printfn "%s" (parser.PrintUsage())
         Error ArgumentsNotSpecified
