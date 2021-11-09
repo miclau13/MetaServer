@@ -10,12 +10,13 @@ type CmdArgs =
     | [<AltCommandLine("-p")>] Print of message:string
     | [<CliPrefix(CliPrefix.None)>] List of ParseResults<ListArgs>
     | [<CliPrefix(CliPrefix.None)>] Init of ParseResults<InitArgs>
+
 with
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | Print _ -> "Print a message"
-            | List _ -> "List file(s)"
+            | List _ -> "List node(s)"
             | Init _ -> "Init nodes and relationships"
 and InitArgs =
     | [<AltCommandLine("-a")>] All
@@ -28,15 +29,17 @@ and ListArgs =
     | [<AltCommandLine("-a")>] All
     | [<AltCommandLine("-s")>] Start of msg:string
     | [<AltCommandLine("-l")>] Label of msg:string
-    | [<AltCommandLine("-r")>] Relationship of msg:string
+    | [<AltCommandLine("-r")>] Relationship of msg:string option
+    | [<AltCommandLine("-c")>] Checksum of msg:string
 
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | All -> "List all Grids."
-            | Start _ -> "Use the given <start> as the starting date. "
-            | Label _ -> "Find the corresping nodes with the <label>. "
-            | Relationship _ -> "Find the Relationship of the node by <checksum>. "
+            | Start _ -> "Use the given <start> as the starting date."
+            | Label _ -> "Find the corresping nodes with the <label>."
+            | Relationship _ -> "Find the Relationship of the node."
+            | Checksum _ -> "List the node by <checksum>."
 
 let runInit (runArgs: ParseResults<InitArgs>) =
     match runArgs with
@@ -68,11 +71,32 @@ let runList (runArgs: ParseResults<ListArgs>) =
         for i in result do
             printfn "%s" i
         Ok ()
+    | argz when (argz.Contains(Relationship) && argz.Contains(Checksum)) ->
+        // Get the relationship and checksum
+        let checksum = runArgs.GetResult(Checksum)
+        let relationship = runArgs.GetResult(Relationship)
+        // Get the nodes with specific relationship
+        let result = Neo4j.getRelatedNodes((relationship, checksum))
+        for i in result do
+            printfn "%s" i
+        Ok ()
     | argz when argz.Contains(Relationship) ->
         // Get the relationship
-        let checksum = runArgs.GetResult(Relationship)
-        // Get the nodes with specific relationship
-        let result = Neo4j.getRelatedNodesByChecksum(checksum)
+        let relationship = runArgs.GetResult(Relationship)
+        match relationship with
+        | Some _ -> 
+            printfn "%s" "No checksum of the node provided"
+            Error ArgumentsNotSpecified
+        | None -> 
+            let result = Neo4j.getAllRelationship()
+            for i in result do
+                printfn "%s" i
+            Ok ()
+    | argz when argz.Contains(Checksum) ->
+        // Get the node
+        let checksum = runArgs.GetResult(Checksum)
+        // Get the nodes with specific checksum
+        let result = Neo4j.getNodeByChecksum(checksum)
         for i in result do
             printfn "%s" i
         Ok ()

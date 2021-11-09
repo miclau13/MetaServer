@@ -117,8 +117,34 @@ let getNodeLabel (node: Node) =
     label
 
 // 9/11/2021
-let getRelatedNodesByChecksum (checksum: string) =
-    let queryMatch = sprintf "(node)<-[]->(result)"
+let getAllRelationship () =
+    let queryMatch = sprintf "(node)-[r]->(result)" 
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .ReturnDistinct(fun (r: Cypher.ICypherResultItem) -> r.Type())
+            .ResultsAsync
+    let nodes =
+        result |> Async.AwaitTask |> Async.RunSynchronously
+    nodes
+
+let getNodeByChecksum (checksum: string) =
+    let queryMatch = sprintf "(node)"
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .Where(fun node -> node.Checksum = checksum)
+            .Return(fun (node: Cypher.ICypherResultItem) -> node.As())
+            .ResultsAsync
+    let nodes =
+        result |> Async.AwaitTask |> Async.RunSynchronously
+    nodes
+
+let getRelatedNodes (relationship: string option, checksum: string) =
+    let queryMatch = 
+        match relationship with
+        | Some r -> sprintf "(node)-[r:%s]->(result)" r
+        | None -> sprintf "(node)<-[]->(result)"
     let result =
         clientWithCypher
             .Match(queryMatch)
