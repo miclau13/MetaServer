@@ -2,6 +2,11 @@ module Neo4j
 open System
 open Neo4jClient
 open Neo4j.Driver
+open FSharp.Json
+
+open Dto
+open Db
+open Domain
 
 [<CLIMutable>]
 type NodeAttributes = {
@@ -17,10 +22,11 @@ type File = {
     Checksum: string
 }
 
-type Grid = {
-    Checksum: string
-    NodeNumber: int
+type Neo4jOutputData<'T> = {
+    data: 'T
 }
+
+type Neo4jOutput<'T> = Neo4jOutputData<'T> * string * seq<string>
 
 type FVCOMInput = {
     Checksum: string
@@ -35,47 +41,31 @@ type River = {
     RiverFile: string
 }
 
-type Node =
-    | File of File
-    | Grid of Grid
-    | FVCOMInput of FVCOMInput
-
-let sandboxUri = Uri("http://3.239.27.71:7474")
-let boltUri = Uri("neo4j://localhost:7687")
-let sandboxUserName = "neo4j"
-let sandboxUserPassword = "abc"
-let driver = GraphDatabase.Driver(boltUri, AuthTokens.Basic(sandboxUserName, sandboxUserPassword));
-let client = new BoltGraphClient (driver);
-client.ConnectAsync() |> Async.AwaitTask |> Async.RunSynchronously |> ignore
-
-// let client = new GraphClient(sandboxUri, sandboxUserName, sandboxUserPassword);
-// client.ConnectAsync() |> Async.AwaitTask |> Async.RunSynchronously |> ignore
-// let session = driver.AsyncSession(o => o.WithDatabase("neo4j"));
-let clientWithCypher = client.Cypher
+let clientWithCypher = Db.getDbClient ()
 
 let demoGrid = Grid {
-    Checksum = "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6a"
-    NodeNumber = 3
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6a"
+    NodeNumber = NodeNumber 3
 }
 
 let demoGridFile = File {
-    Path = "/minio/demo/PO7/grid/"
-    Name = "grid1"
-    Format = "grd"
-    Checksum = "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6z"
+    Path = Path "/minio/demo/PO7/grid/"
+    Name = Name "grid1"
+    Format = Format "grd"
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6z"
 }
 
 let demoFVCOMInput = FVCOMInput {
-    Checksum = "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6b"
-    StartDate = "08/11/2021"
-    EndDate = "09/11/2021"
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6b"
+    StartDate = StartDate "08/11/2021"
+    EndDate = EndDate "09/11/2021"
 }
 
 let demoFVCOMInputFile = File {
-    Path = "/minio/demo/PO7/"
-    Name = "run"
-    Format = "nml"
-    Checksum = "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6y"
+    Path = Path "/minio/demo/PO7/"
+    Name = Name "run"
+    Format = Format "nml"
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6y"
 }
 
 // let runNML = {
@@ -116,7 +106,46 @@ let getNodeLabel (node: Node) =
         | FVCOMInput _ -> nameof FVCOMInput
     label
 
+
+// 10/11/2021
+let getDataInDomainFormat<'T> (node: string) =
+    Json.deserialize<'T> (node)
+
 // 9/11/2021
+let toListInDomainFormat (nodes) = 
+    nodes 
+        |> Seq.map (fun (item) -> 
+            let (data, relationship, labels) = item
+            let nullGridData = Unchecked.defaultof<Dto<GridDto>>
+            let nullFileData = Unchecked.defaultof<Dto<FileDto>>
+            let nullFVCOMInputData = Unchecked.defaultof<Dto<FVCOMInputDto>>
+            let labelArr = Seq.toArray labels
+            let dto = {
+                        Labels = labelArr
+                        FileData = 
+                            if Array.contains "File" labelArr then
+                                getDataInDomainFormat<Dto<FileDto>> (data)
+                            else nullFileData
+                        GridData = 
+                            if Array.contains "Grid" labelArr then
+                                getDataInDomainFormat<Dto<GridDto>> (data)
+                            else nullGridData
+                        FVCOMInputData = 
+                            if Array.contains "FVCOMInput" labelArr then
+                                getDataInDomainFormat<Dto<FVCOMInputDto>> (data)
+                            else nullFVCOMInputData
+                    }
+            printfn "%A" dto
+            dto |> Node.toDomain
+            // let node = Json.deserialize<Neo4jOutput<File>> (a)
+            // match c with 
+            // | "File" -> Json.deserialize<Neo4jOutput<File>> (a)
+            
+            // let relationshipTo = b
+            // {| Data = node; RelationshipTo = relationshipTo |}
+        ) 
+        |> List.ofSeq
+
 let getAllRelationship () =
     let queryMatch = sprintf "(node)-[r]->(result)" 
     let result =
@@ -143,17 +172,19 @@ let getNodeByChecksum (checksum: string) =
 let getRelatedNodes (relationship: string option, checksum: string) =
     let queryMatch = 
         match relationship with
-        | Some r -> sprintf "(node)-[r:%s]->(result)" r
-        | None -> sprintf "(node)<-[]->(result)"
+        | Some r -> sprintf "(node)-[relationship:%s]->(targetNode)" r
+        | None -> sprintf "(node)<-[]->(targetNode)"
     let result =
         clientWithCypher
             .Match(queryMatch)
             .Where(fun node -> node.Checksum = checksum)
-            .Return(fun (result: Cypher.ICypherResultItem) -> result.As())
+            .Return(fun targetNode relationship -> targetNode.As(), relationship.Type(), targetNode.Labels())
             .ResultsAsync
     let nodes =
-        result |> Async.AwaitTask |> Async.RunSynchronously
-    nodes
+        result |> Async.AwaitTask |> Async.RunSynchronously 
+
+    let data = toListInDomainFormat nodes
+    data
 
 let getNodesByLabel (label: string) =
     let queryMatch = sprintf "(node: %s)" label
@@ -175,9 +206,9 @@ let getClientWithNodeInputParameter (client: Cypher.ICypherFluentQuery) (node: N
 
 let getNodeAttributes (node: Node) = 
     match node with
-        | File file -> { Label = "File"; Key = "Checksum"; KeyValue = file.Checksum }
-        | Grid grid -> { Label = "Grid"; Key = "Checksum"; KeyValue = grid.Checksum }
-        | FVCOMInput fvcomInput -> { Label = "FVCOMInput"; Key = "Checksum"; KeyValue = fvcomInput.Checksum }
+        | File file -> { Label = "File"; Key = "Checksum"; KeyValue = file.Checksum |> Checksum.value }
+        | Grid grid -> { Label = "Grid"; Key = "Checksum"; KeyValue = grid.Checksum |> Checksum.value }
+        | FVCOMInput fvcomInput -> { Label = "FVCOMInput"; Key = "Checksum"; KeyValue = fvcomInput.Checksum |> Checksum.value }
 
 let getAllNodes () =
     let result =

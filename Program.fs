@@ -77,8 +77,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
         let relationship = runArgs.GetResult(Relationship)
         // Get the nodes with specific relationship
         let result = Neo4j.getRelatedNodes((relationship, checksum))
-        for i in result do
-            printfn "%s" i
+        printfn "%A" result
         Ok ()
     | argz when argz.Contains(Relationship) ->
         // Get the relationship
