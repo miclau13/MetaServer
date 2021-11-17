@@ -112,37 +112,10 @@ let getDataInDomainFormat<'T> (node: string) =
     Json.deserialize<'T> (node)
 
 // 9/11/2021
-let toListInDomainFormat (nodes) = 
+let toListInDomainFormat (nodes: seq<string * string * seq<string>>) = 
     nodes 
-        |> Seq.map (fun (item) -> 
-            let (data, relationship, labels) = item
-            let nullGridData = Unchecked.defaultof<Dto<GridDto>>
-            let nullFileData = Unchecked.defaultof<Dto<FileDto>>
-            let nullFVCOMInputData = Unchecked.defaultof<Dto<FVCOMInputDto>>
-            let labelArr = Seq.toArray labels
-            let dto = {
-                        Labels = labelArr
-                        FileData = 
-                            if Array.contains "File" labelArr then
-                                getDataInDomainFormat<Dto<FileDto>> (data)
-                            else nullFileData
-                        GridData = 
-                            if Array.contains "Grid" labelArr then
-                                getDataInDomainFormat<Dto<GridDto>> (data)
-                            else nullGridData
-                        FVCOMInputData = 
-                            if Array.contains "FVCOMInput" labelArr then
-                                getDataInDomainFormat<Dto<FVCOMInputDto>> (data)
-                            else nullFVCOMInputData
-                    }
-            printfn "%A" dto
+        |> Seq.map (fun (dto) -> 
             dto |> Node.toDomain
-            // let node = Json.deserialize<Neo4jOutput<File>> (a)
-            // match c with 
-            // | "File" -> Json.deserialize<Neo4jOutput<File>> (a)
-            
-            // let relationshipTo = b
-            // {| Data = node; RelationshipTo = relationshipTo |}
         ) 
         |> List.ofSeq
 
@@ -173,7 +146,7 @@ let getRelatedNodes (relationship: string option, checksum: string) =
     let queryMatch = 
         match relationship with
         | Some r -> sprintf "(node)-[relationship:%s]->(targetNode)" r
-        | None -> sprintf "(node)<-[]->(targetNode)"
+        | None -> sprintf "(node)<-[relationship]->(targetNode)"
     let result =
         clientWithCypher
             .Match(queryMatch)
@@ -182,7 +155,6 @@ let getRelatedNodes (relationship: string option, checksum: string) =
             .ResultsAsync
     let nodes =
         result |> Async.AwaitTask |> Async.RunSynchronously 
-
     let data = toListInDomainFormat nodes
     data
 

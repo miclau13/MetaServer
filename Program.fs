@@ -31,6 +31,7 @@ and ListArgs =
     | [<AltCommandLine("-l")>] Label of msg:string
     | [<AltCommandLine("-r")>] Relationship of msg:string option
     | [<AltCommandLine("-c")>] Checksum of msg:string
+    | [<AltCommandLine("-pl")>] PathLength of msg:string
 
     interface IArgParserTemplate with
         member this.Usage =
@@ -40,6 +41,7 @@ and ListArgs =
             | Label _ -> "Find the corresping nodes with the <label>."
             | Relationship _ -> "Find the Relationship of the node."
             | Checksum _ -> "List the node by <checksum>."
+            | PathLength _ -> "Specify maximum the path length."
 
 let runInit (runArgs: ParseResults<InitArgs>) =
     match runArgs with

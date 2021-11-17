@@ -32,18 +32,17 @@ type NodeDto = {
   FVCOMInputData: Dto<FVCOMInputDto>
 }
 
-type NodeOutput = {
-  Labels: string []
-  Grid: Result<Grid, string> option
-  File: Result<File, string> option
-  FVCOMInput: Result<FVCOMInput, string> option
-}
-
 /// Define a type to represent possible errors
 type DtoError =
     | ValidationError of string
     | DeserializationException of exn
 
+type NodeOutput = {
+  Labels: string []
+  Grid: Result<Grid, DtoError> option
+  File: Result<File, DtoError> option
+  FVCOMInput: Result<FVCOMInput, DtoError> option
+}
 type ResultBuilder() =
     member this.Return x = Ok x
     member this.Zero() = Ok ()
@@ -90,7 +89,7 @@ module Grid =
     result {
       let! deserializedValue =
           jsonString
-          |> Json.deserialize
+          |> Json.deserialize<Dto<GridDto>>
           |> Result.mapError DeserializationException
 
       let! domainValue =
@@ -140,7 +139,7 @@ module File =
     result {
       let! deserializedValue =
           jsonString
-          |> Json.deserialize
+          |> Json.deserialize<Dto<FileDto>>
           |> Result.mapError DeserializationException
 
       let! domainValue =
@@ -187,7 +186,7 @@ module FVCOMInput =
     result {
       let! deserializedValue =
           jsonString
-          |> Json.deserialize
+          |> Json.deserialize<Dto<FVCOMInputDto>>
           |> Result.mapError DeserializationException
 
       let! domainValue =
@@ -206,7 +205,7 @@ module FVCOMInput =
 //     |> Json.serialize
 
 // /// Deserialize a JSON string into a FVCOMInput
-// let jsonToDomain<'T> (jsonString: string) :Result<'U, DtoError> =
+// let jsonToDomain<'T> (jsonString: string) toDomain :Result<'U, DtoError> =
 //   result {
 //     let! deserializedValue =
 //         jsonString
@@ -221,11 +220,13 @@ module FVCOMInput =
 //     return domainValue
 // }
 
-module Node = 
+// let dtoToDomain<'T> (labels: string []) (label: string) (jsonString) (toDomain) = 
+//   if Array.contains label labels then
+//     jsonToDomain<'T> jsonString toDomain
+//     |> Some
+//   else None
 
-  // 10/11/2021
-  let getDataInDomainFormat<'T> (node: string) =
-      Json.deserialize<'T> (node)
+module Node = 
   // let fromDomain (domainObj:Node) :NodeDto =
   //   let nullBData = Nullable()
   //   let nullCData = null
@@ -242,51 +243,30 @@ module Node =
   //   | D name ->
   //     let ddata = name |> nameDtoFromDomain
   //     {Tag="D"; BData=nullBData; CData=nullCData; DData=ddata}
-  let toDomain (dto: NodeDto) =
+  let toDomain (dto: string * string * seq<string>) =
+    let (jsonString, relationship, labels) = dto
+    printfn "relationship: %A" relationship
+    let labelArr = Seq.toArray labels
     let result = 
       {
-          Labels = dto.Labels
+          Labels = labelArr
           File = 
-            match box dto.FileData with
-            | null -> None
-            | _ -> 
-                dto.FileData
-                |> File.toDomain
-                |> Some
-          Grid =
-            match box dto.GridData with
-              | null -> None
-              | _ -> 
-                  dto.GridData
-                  |> Grid.toDomain
-                  |> Some
-          FVCOMInput =
-            match box dto.FVCOMInputData with
-              | null -> None
-              | _ -> 
-                  dto.FVCOMInputData
-                  |> FVCOMInput.toDomain
-                  |> Some 
+            if Array.contains "File" labelArr then
+              jsonString 
+              |> File.jsonToDomain
+              |> Some
+            else None
+          Grid = 
+            if Array.contains "Grid" labelArr then
+              jsonString 
+              |> Grid.jsonToDomain
+              |> Some
+            else None
+          FVCOMInput = 
+            if Array.contains "FVCOMInput" labelArr then
+              jsonString 
+              |> FVCOMInput.jsonToDomain
+              |> Some
+            else None
       }
     result
-    // match dto.FirstLabel with
-    // | "File" ->
-    //   match box dto.FileData with
-    //   | null ->
-    //       Error "File data not expected to be null"
-    //   | _ ->
-    //       dto.FileData
-    //       |> File.toDomain  // returns Result...
-    //       |> Result.map File     // ...so must use "map"
-    // | "Grid" ->
-    //   match box dto.GridData with
-    //   | null ->
-    //       Error "Grid data not expected to be null"
-    //   | _ ->
-    //       dto.GridData
-    //       |> Grid.toDomain  // returns Result...
-    //       |> Result.map Grid     // ...so must use "map"
-    // | _ ->
-    //   // all other cases
-    //   let msg = sprintf "Label '%s' not recognized" dto.FirstLabel
-    //   Error msg
