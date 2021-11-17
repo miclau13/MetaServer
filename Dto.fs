@@ -38,6 +38,7 @@ type DtoError =
     | DeserializationException of exn
 
 type NodeOutput = {
+  Checksum: string
   Labels: string []
   Grid: Result<Grid, DtoError> option
   File: Result<File, DtoError> option
@@ -243,9 +244,8 @@ module Node =
   //   | D name ->
   //     let ddata = name |> nameDtoFromDomain
   //     {Tag="D"; BData=nullBData; CData=nullCData; DData=ddata}
-  let toDomain (dto: string * string * seq<string>) =
-    let (jsonString, relationship, labels) = dto
-    printfn "relationship: %A" relationship
+  let toDomain (dto: string * seq<string>) =
+    let (jsonString, labels) = dto
     let labelArr = Seq.toArray labels
     let result = 
       {
@@ -268,5 +268,21 @@ module Node =
               |> FVCOMInput.jsonToDomain
               |> Some
             else None
+          Checksum = ""
       }
-    result
+    let checksum = 
+        match result with 
+        | { File = Some r } -> 
+          match r with 
+          | Ok value -> match value.Checksum with | Checksum v -> v
+          | Error e -> e.ToString()
+        | { Grid = Some r } -> 
+          match r with 
+          | Ok value -> match value.Checksum with | Checksum v -> v
+          | Error e -> e.ToString()
+        | { FVCOMInput = Some r } -> 
+          match r with 
+          | Ok value -> match value.Checksum with | Checksum v -> v
+          | Error e -> e.ToString()
+        | _ -> "No checksum"
+    { result with Checksum = checksum }

@@ -30,7 +30,7 @@ and ListArgs =
     | [<AltCommandLine("-s")>] Start of msg:string
     | [<AltCommandLine("-l")>] Label of msg:string
     | [<AltCommandLine("-r")>] Relationship of msg:string option
-    | [<AltCommandLine("-c")>] Checksum of msg:string
+    | [<AltCommandLine("-cs")>] Checksum of msg:string
     | [<AltCommandLine("-pl")>] PathLength of msg:string
 
     interface IArgParserTemplate with
@@ -56,8 +56,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
     match runArgs with
     | argz when argz.Contains(All) ->
         let result = Neo4j.getAllNodes ()
-        for i in result do
-            printfn "%s" i
+        printfn "Result: %A " result
         Ok ()
     | argz when argz.Contains(Start) ->
         // Get the start date 
@@ -70,8 +69,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
         let labelArgs = runArgs.GetResult(Label)
         // Get the nodes with specific label
         let result = Neo4j.getNodesByLabel(labelArgs)
-        for i in result do
-            printfn "%s" i
+        printfn "Result: %A " result
         Ok ()
     | argz when (argz.Contains(Relationship) && argz.Contains(Checksum)) ->
         // Get the relationship and checksum
@@ -98,8 +96,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
         let checksum = runArgs.GetResult(Checksum)
         // Get the nodes with specific checksum
         let result = Neo4j.getNodeByChecksum(checksum)
-        for i in result do
-            printfn "%s" i
+        printfn "%A" result
         Ok ()
     | _ -> 
         printfn "%s" "No argument provided"

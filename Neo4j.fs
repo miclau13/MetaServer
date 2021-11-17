@@ -106,13 +106,14 @@ let getNodeLabel (node: Node) =
         | FVCOMInput _ -> nameof FVCOMInput
     label
 
+// 17/11/2021
 
 // 10/11/2021
 let getDataInDomainFormat<'T> (node: string) =
     Json.deserialize<'T> (node)
 
 // 9/11/2021
-let toListInDomainFormat (nodes: seq<string * string * seq<string>>) = 
+let toListInDomainFormat (nodes: seq<string * seq<string>>) = 
     nodes 
         |> Seq.map (fun (dto) -> 
             dto |> Node.toDomain
@@ -136,39 +137,66 @@ let getNodeByChecksum (checksum: string) =
         clientWithCypher
             .Match(queryMatch)
             .Where(fun node -> node.Checksum = checksum)
-            .Return(fun (node: Cypher.ICypherResultItem) -> node.As())
+            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
             .ResultsAsync
     let nodes =
         result |> Async.AwaitTask |> Async.RunSynchronously
+        |> toListInDomainFormat
     nodes
 
 let getRelatedNodes (relationship: string option, checksum: string) =
     let queryMatch = 
         match relationship with
-        | Some r -> sprintf "(node)-[relationship:%s]->(targetNode)" r
-        | None -> sprintf "(node)<-[relationship]->(targetNode)"
+        | Some r -> sprintf "(node)<-[relationship:%s]-(targetNode)" r
+        | None -> sprintf "(node)<-[relationship]-(targetNode)"
     let result =
         clientWithCypher
             .Match(queryMatch)
             .Where(fun node -> node.Checksum = checksum)
-            .Return(fun targetNode relationship -> targetNode.As(), relationship.Type(), targetNode.Labels())
+            .Return(fun targetNode relationship -> targetNode.As(), targetNode.Labels(), relationship.Type())
             .ResultsAsync
-    let nodes =
-        result |> Async.AwaitTask |> Async.RunSynchronously 
-    let data = toListInDomainFormat nodes
-    data
+        |> Async.AwaitTask |> Async.RunSynchronously 
+    let nodes = 
+        Seq.map (fun (dto) -> 
+            let (node, nodeLabels, relationshipLabel) = dto
+            let nodeInfo = (node, nodeLabels) |> Node.toDomain
+            let result = sprintf "Source Node:%s <-----%s----- Node:%s(%A)" checksum relationshipLabel nodeInfo.Checksum nodeInfo.Labels
+            result
+        ) result
+        |> List.ofSeq
+
+    let queryMatch' = 
+        match relationship with
+        | Some r -> sprintf "(node)-[relationship:%s]->(targetNode)" r
+        | None -> sprintf "(node)-[relationship]->(targetNode)"
+    let result' =
+        clientWithCypher
+            .Match(queryMatch')
+            .Where(fun node -> node.Checksum = checksum)
+            .Return(fun targetNode relationship -> targetNode.As(), targetNode.Labels(), relationship.Type())
+            .ResultsAsync
+        |> Async.AwaitTask |> Async.RunSynchronously 
+    let nodes' = 
+        Seq.map (fun (dto) -> 
+            let (node, nodeLabels, relationshipLabel) = dto
+            let nodeInfo = (node, nodeLabels) |> Node.toDomain
+            let result = sprintf "Source Node:%s -----%s-----> Node:%s(%A)" checksum relationshipLabel nodeInfo.Checksum nodeInfo.Labels
+            result
+        ) result'
+        |> List.ofSeq
+    nodes @ nodes'
 
 let getNodesByLabel (label: string) =
     let queryMatch = sprintf "(node: %s)" label
     let result =
         clientWithCypher
             .Match(queryMatch)
-            .Return(fun (node: Cypher.ICypherResultItem) -> node.As())
+            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
             .ResultsAsync
     let nodes =
         result |> Async.AwaitTask |> Async.RunSynchronously
+        |> toListInDomainFormat
     nodes
-
 // 8/11/2021
 let getClientWithNodeInputParameter (client: Cypher.ICypherFluentQuery) (node: Node) = 
     match node with 
@@ -186,10 +214,11 @@ let getAllNodes () =
     let result =
         clientWithCypher
             .Match("(node)")
-            .Return(fun (node: Cypher.ICypherResultItem) -> node.As())
+            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
             .ResultsAsync
     let nodes =
         result |> Async.AwaitTask |> Async.RunSynchronously
+        |> toListInDomainFormat
     nodes
 
 let createNodeIfNotExist (node: Node) =
