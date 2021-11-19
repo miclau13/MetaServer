@@ -59,10 +59,10 @@ let fromDto (dto: Dto<'T>) =
 
 module Grid =
   /// create a DTO from a domain object
-  let fromDomain (grid: Domain.Grid) :Dto<GridDto> =
+  let fromDomain (grid: Domain.Grid) :GridDto =
     let checksum = grid.Checksum |> Checksum.value
     let nodeNumber = grid.NodeNumber |> NodeNumber.value
-    let dto = { Checksum = checksum; NodeNumber = nodeNumber } |> toDto
+    let dto = { Checksum = checksum; NodeNumber = nodeNumber }
     dto
 
   /// create a domain object from a DTO
@@ -103,12 +103,12 @@ module Grid =
 
 module File =
   /// create a DTO from a domain object
-  let fromDomain (file: Domain.File) :Dto<FileDto> =
+  let fromDomain (file: Domain.File) :FileDto =
     let checksum = file.Checksum |> Checksum.value
     let name = file.Name |> Name.value
     let path = file.Path |> Path.value
     let format = file.Format |> Format.value
-    let dto = { Checksum = checksum; Name = name; Path = path; Format = format } |> toDto
+    let dto = { Checksum = checksum; Name = name; Path = path; Format = format } 
     dto
 
   /// create a domain object from a DTO
@@ -153,11 +153,11 @@ module File =
 
 module FVCOMInput =
   /// create a DTO from a domain object
-  let fromDomain (fvcomInput: Domain.FVCOMInput) :Dto<FVCOMInputDto> =
+  let fromDomain (fvcomInput: Domain.FVCOMInput) :FVCOMInputDto =
     let checksum = fvcomInput.Checksum |> Checksum.value
     let startDate = fvcomInput.StartDate |> StartDate.value
     let endDate = fvcomInput.EndDate |> EndDate.value
-    let dto = { Checksum = checksum; StartDate = startDate; EndDate = endDate } |> toDto
+    let dto = { Checksum = checksum; StartDate = startDate; EndDate = endDate }
     dto
 
   /// create a domain object from a DTO

@@ -46,9 +46,9 @@ and ListArgs =
 let runInit (runArgs: ParseResults<InitArgs>) =
     match runArgs with
     | _ ->
-        Neo4j.deleteAllNodes()
-        let result = Neo4j.createInitNodesIfNotExist ()
-        printfn "Result: %A " result
+        // Neo4j.deleteAllNodes()
+        // let result = Neo4j.createInitNodesIfNotExist ()
+        // printfn "Result: %A " result
         Neo4j.relateInitNodes ()
         Ok ()
 
@@ -76,7 +76,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
         let checksum = runArgs.GetResult(Checksum)
         let relationship = runArgs.GetResult(Relationship)
         // Get the nodes with specific relationship
-        let result = Neo4j.getRelatedNodes((relationship, checksum))
+        let result = Neo4j.getRelatedNodesPath((relationship, checksum))
         printfn "%A" result
         Ok ()
     | argz when argz.Contains(Relationship) ->

@@ -8,6 +8,8 @@ open Dto
 open Db
 open Domain
 
+open System.Collections.Generic;
+
 [<CLIMutable>]
 type NodeAttributes = {
     Label: string
@@ -43,29 +45,97 @@ type River = {
 
 let clientWithCypher = Db.getDbClient ()
 
+// let demoGrid = Grid {
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c7a"
+//     NodeNumber = NodeNumber 18
+// }
+
+// let demoGridFile = File {
+//     Path = Path "/minio/demo/PO6/grid/"
+//     Name = Name "grid1"
+//     Format = Format "grd"
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c7z"
+// }
+
+// let demoFVCOMInput = FVCOMInput {
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c7b"
+//     StartDate = StartDate "18/11/2021"
+//     EndDate = EndDate "19/11/2021"
+// }
+
+// let demoFVCOMInputFile = File {
+//     Path = Path "/minio/demo/PO6/"
+//     Name = Name "run"
+//     Format = Format "nml"
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c7y"
+// }
+
+// let demoGrid = Grid {
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6a"
+//     NodeNumber = NodeNumber 3
+// }
+
+// let demoGridFile = File {
+//     Path = Path "/minio/demo/PO7/grid/"
+//     Name = Name "grid1"
+//     Format = Format "grd"
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6z"
+// }
+
+// let demoFVCOMInput = FVCOMInput {
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6b"
+//     StartDate = StartDate "08/11/2021"
+//     EndDate = EndDate "09/11/2021"
+// }
+
+// let demoFVCOMInputFile = File {
+//     Path = Path "/minio/demo/PO7/"
+//     Name = Name "run"
+//     Format = Format "nml"
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6y"
+// }
+
 let demoGrid = Grid {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6a"
-    NodeNumber = NodeNumber 3
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8a"
+    NodeNumber = NodeNumber 4
 }
 
 let demoGridFile = File {
-    Path = Path "/minio/demo/PO7/grid/"
+    Path = Path "/minio/demo/PO8/grid/"
     Name = Name "grid1"
     Format = Format "grd"
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6z"
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8z"
 }
 
 let demoFVCOMInput = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6b"
-    StartDate = StartDate "08/11/2021"
-    EndDate = EndDate "09/11/2021"
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c10b"
+    StartDate = StartDate "28/12/2021"
+    EndDate = EndDate "29/12/2021"
+}
+
+let demoFVCOMInput1 = FVCOMInput {
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c9b"
+    StartDate = StartDate "28/12/2021"
+    EndDate = EndDate "29/12/2021"
+}
+
+let demoFVCOMInput2 = FVCOMInput {
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8b"
+    StartDate = StartDate "28/12/2021"
+    EndDate = EndDate "29/12/2021"
+}
+
+let demoFVCOMInput3 = FVCOMInput {
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c11b"
+    StartDate = StartDate "18/12/2021"
+    EndDate = EndDate "19/12/2021"
 }
 
 let demoFVCOMInputFile = File {
-    Path = Path "/minio/demo/PO7/"
+    Path = Path "/minio/demo/PO8/"
     Name = Name "run"
     Format = Format "nml"
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6y"
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8y"
 }
 
 // let runNML = {
@@ -106,7 +176,63 @@ let getNodeLabel (node: Node) =
         | FVCOMInput _ -> nameof FVCOMInput
     label
 
-// 17/11/2021
+// 18/11/2021 & 19/11/2021
+let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cypher.PathsResultBolt>) = 
+    pathResultSeq
+    |> Seq.map (fun (pathResult) ->
+        let relationships = pathResult.Relationships
+        let nodes = pathResult.Nodes
+        let nodedIdToNodeMap = 
+            Seq.fold (fun (acc: Map<int64, Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltNode>) (node: Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltNode) -> acc.Add (node.Id, node)) (Map.empty) nodes
+        printfn "%A" nodedIdToNodeMap
+        Seq.fold (fun acc (relationship: Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltRelationship) ->
+            let startNodeId = relationship.StartNodeId
+            let endNodeId = relationship.EndNodeId
+            let relationshipType = relationship.Type
+            let startNode = nodedIdToNodeMap.Item startNodeId
+            let endNode = nodedIdToNodeMap.Item endNodeId
+            match direction with
+            | "TO" -> 
+                if acc = "" then
+                    sprintf "NodeId:%i(%s) <-----%s----- NodeId:%i(%s)" endNodeId (Seq.reduce (+) endNode.Labels) relationshipType startNodeId (Seq.reduce (+) startNode.Labels)
+                else 
+                    sprintf "%s <-----%s----- NodeId:%i(%s)" acc relationshipType startNodeId (Seq.reduce (+) startNode.Labels)
+            | "FROM" -> 
+                if acc = "" then
+                    sprintf "NodeId:%i(%s) -----%s-----> NodeId:%i(%s)" startNodeId (Seq.reduce (+) startNode.Labels) relationshipType endNodeId (Seq.reduce (+) endNode.Labels)
+                else 
+                    sprintf "%s -----%s-----> NodeId:%i(%s)" acc relationshipType endNodeId (Seq.reduce (+) endNode.Labels)
+            | _ -> ""
+        ) "" relationships 
+    ) 
+    |> List.ofSeq
+
+let getRelatedNodesPath (relationship: string option, checksum: string) =
+    let queryMatch = 
+        match relationship with
+        | Some r -> sprintf "p = (node)<-[:%s*]-(targetNode)" r
+        | None -> sprintf "p = (node)<-[*]-(targetNode)"
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .Where(fun node -> node.Checksum = checksum)
+            .Return(fun p node -> p.As())
+            .ResultsAsync
+        |> Async.AwaitTask |> Async.RunSynchronously 
+        |> getResult "TO"
+    let queryMatch' = 
+        match relationship with
+        | Some r -> sprintf "p = (node)-[:%s*]->(targetNode)" r
+        | None -> sprintf "p = (node)-[*]->(targetNode)"
+    let result' =
+        clientWithCypher
+            .Match(queryMatch')
+            .Where(fun node -> node.Checksum = checksum)
+            .Return(fun p node -> p.As())
+            .ResultsAsync
+        |> Async.AwaitTask |> Async.RunSynchronously 
+        |> getResult "FROM"
+    result @ result'
 
 // 10/11/2021
 let getDataInDomainFormat<'T> (node: string) =
@@ -200,9 +326,9 @@ let getNodesByLabel (label: string) =
 // 8/11/2021
 let getClientWithNodeInputParameter (client: Cypher.ICypherFluentQuery) (node: Node) = 
     match node with 
-        | File file -> client.WithParam("node", file)
-        | Grid grid -> client.WithParam("node", grid)
-        | FVCOMInput fvcomInput -> client.WithParam("node", fvcomInput)
+        | File file -> client.WithParam("node", (File.fromDomain file))
+        | Grid grid -> client.WithParam("node", (Grid.fromDomain grid))
+        | FVCOMInput fvcomInput -> client.WithParam("node", (FVCOMInput.fromDomain fvcomInput))
 
 let getNodeAttributes (node: Node) = 
     match node with
@@ -228,7 +354,8 @@ let createNodeIfNotExist (node: Node) =
     let nodeKeyValue = nodeAttributes.KeyValue
     let query = sprintf "(node:%s {%s: $nodeKeyValue})"  nodeLabel nodeKey
     let client' = getClientWithNodeInputParameter clientWithCypher node
-
+    printfn "query:%A" query
+    printfn "nodeKeyValue:%A" nodeKeyValue
     client'
         .Merge(query)
         .OnCreate()
@@ -324,11 +451,14 @@ let update (node: Node) =
 
 let deleteDemoGrid () = deleteNode demoGrid
 
-let createInitNodesIfNotExist () = createMultipleNodesIfNotExist initNodes
+let createInitNodesIfNotExist () = createMultipleNodesIfNotExist initFVCOMInput
 
 let relateInitNodes () = 
-    relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
-    relateNodes demoGrid demoGridFile "FILE_LOCATION_IS"
-    relateNodes demoFVCOMInput demoFVCOMInputFile "FILE_LOCATION_IS"
+    // relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
+    // relateNodes demoGrid demoGridFile "FILE_LOCATION_IS"
+    // relateNodes demoFVCOMInput demoFVCOMInputFile "FILE_LOCATION_IS"
+    // relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT"
+    relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT"
+    // relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
 
 let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid
