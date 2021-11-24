@@ -82,7 +82,6 @@ module EndDate =
 type Grid = {
   Checksum: Checksum
   NodeNumber: NodeNumber
-  // RelationShip: RelationShip
 }
 
 type File = {

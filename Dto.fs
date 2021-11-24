@@ -32,6 +32,17 @@ type NodeDto = {
   FVCOMInputData: Dto<FVCOMInputDto>
 }
 
+type HasInputDTO = {
+  SID: string
+}
+
+type FileLocationIsDTO = {
+  BasicPath: string
+}
+type RelationshipDto = 
+  | HasInputDTO of HasInputDTO
+  | FileLocationIsDTO of FileLocationIsDTO
+
 /// Define a type to represent possible errors
 type DtoError =
     | ValidationError of string

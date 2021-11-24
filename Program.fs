@@ -31,7 +31,8 @@ and ListArgs =
     | [<AltCommandLine("-l")>] Label of msg:string
     | [<AltCommandLine("-r")>] Relationship of msg:string option
     | [<AltCommandLine("-cs")>] Checksum of msg:string
-    | [<AltCommandLine("-pl")>] PathLength of msg:string
+    | [<AltCommandLine("-mpl")>] MaxPathLength of msg:string
+    | [<AltCommandLine("-rp")>] RelationshipProperty of msg:string
 
     interface IArgParserTemplate with
         member this.Usage =
@@ -41,14 +42,15 @@ and ListArgs =
             | Label _ -> "Find the corresping nodes with the <label>."
             | Relationship _ -> "Find the Relationship of the node."
             | Checksum _ -> "List the node by <checksum>."
-            | PathLength _ -> "Specify maximum the path length."
+            | MaxPathLength _ -> "Specify maximum the path length."
+            | RelationshipProperty _ -> "Specify Relationship properties."
 
 let runInit (runArgs: ParseResults<InitArgs>) =
     match runArgs with
     | _ ->
-        // Neo4j.deleteAllNodes()
-        // let result = Neo4j.createInitNodesIfNotExist ()
-        // printfn "Result: %A " result
+        Neo4j.deleteAllNodes()
+        let result = Neo4j.createInitNodesIfNotExist ()
+        printfn "Result: %A " result
         Neo4j.relateInitNodes ()
         Ok ()
 
@@ -74,18 +76,38 @@ let runList (runArgs: ParseResults<ListArgs>) =
     | argz when (argz.Contains(Relationship) && argz.Contains(Checksum)) ->
         // Get the relationship and checksum
         let checksum = runArgs.GetResult(Checksum)
-        let relationship = runArgs.GetResult(Relationship)
         // Get the nodes with specific relationship
-        let result = Neo4j.getRelatedNodesPath((relationship, checksum))
+        let relationship = runArgs.GetResult(Relationship)
+        // Get the maximum path length if any
+        let maxPathLength = 
+            match argz.Contains(MaxPathLength) with
+            | true -> sprintf "*..%s" (runArgs.GetResult(MaxPathLength))
+            | false -> "*"
+        let result = Neo4j.getRelatedNodesPath((relationship, checksum, maxPathLength))
         printfn "%A" result
         Ok ()
     | argz when argz.Contains(Relationship) ->
         // Get the relationship
         let relationship = runArgs.GetResult(Relationship)
+        // Get the maximum path length if any
+        let maxPathLength = 
+            match argz.Contains(MaxPathLength) with
+            | true -> sprintf "*..%s" (runArgs.GetResult(MaxPathLength))
+            | false -> "*"
         match relationship with
-        | Some _ -> 
-            printfn "%s" "No checksum of the node provided"
-            Error ArgumentsNotSpecified
+        | Some r -> 
+            // Get the relationship properties if any
+            match argz.Contains(RelationshipProperty) with
+            | true -> 
+                let relationshipProperty = runArgs.GetResult(RelationshipProperty)
+                let result = Neo4j.getRelationships(r, maxPathLength, Some relationshipProperty)
+                printfn "%A" result
+                Ok ()
+                // sprintf "*..%s" (runArgs.GetResult(RelationshipProperty))
+            | false ->
+                let result = Neo4j.getRelationships(r, maxPathLength, None)
+                printfn "%A" result
+                Ok ()
         | None -> 
             let result = Neo4j.getAllRelationship()
             for i in result do

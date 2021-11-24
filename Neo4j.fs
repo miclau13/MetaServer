@@ -94,6 +94,10 @@ let clientWithCypher = Db.getDbClient ()
 //     Format = Format "nml"
 //     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6y"
 // }
+let demoHasInput1 = HasInputDTO { SID = "1" }
+let demoHasInput2 = HasInputDTO { SID = "2" }
+let demoFileLocationis1 = FileLocationIsDTO { BasicPath = "root" }
+let demoFileLocationis2 = FileLocationIsDTO { BasicPath = "src" }
 
 let demoGrid = Grid {
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8a"
@@ -165,7 +169,7 @@ let initGrids = [demoGrid]
 let initGridsLabels = ["Grid"]
 let initFiles = [demoFVCOMInputFile; demoGridFile]
 let initFilesLabels = ["File"]
-let initFVCOMInput = [demoFVCOMInput]
+let initFVCOMInput = [demoFVCOMInput; demoFVCOMInput1; demoFVCOMInput2; demoFVCOMInput3; demoGrid; demoGridFile]
 let initFVCOMInputLabels = ["FVCOMInput"]
 
 let getNodeLabel (node: Node) =
@@ -176,6 +180,18 @@ let getNodeLabel (node: Node) =
         | FVCOMInput _ -> nameof FVCOMInput
     label
 
+// 10/11/2021
+let getDataInDomainFormat<'T> (node: string) =
+    Json.deserialize<'T> (node)
+
+// 9/11/2021
+let toListInDomainFormat (nodes: seq<string * seq<string>>) = 
+    nodes 
+    |> Seq.map (fun (dto) -> 
+        dto |> Node.toDomain
+    ) 
+    |> List.ofSeq
+
 // 18/11/2021 & 19/11/2021
 let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cypher.PathsResultBolt>) = 
     pathResultSeq
@@ -184,13 +200,49 @@ let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cyph
         let nodes = pathResult.Nodes
         let nodedIdToNodeMap = 
             Seq.fold (fun (acc: Map<int64, Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltNode>) (node: Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltNode) -> acc.Add (node.Id, node)) (Map.empty) nodes
-        printfn "%A" nodedIdToNodeMap
         Seq.fold (fun acc (relationship: Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltRelationship) ->
             let startNodeId = relationship.StartNodeId
             let endNodeId = relationship.EndNodeId
             let relationshipType = relationship.Type
             let startNode = nodedIdToNodeMap.Item startNodeId
             let endNode = nodedIdToNodeMap.Item endNodeId
+            let d = relationship.Properties.Item "SID"
+            // let c = relationship.Properties.[0]
+            let a = relationship.Properties.["SID"]
+            let inventory : IDictionary<string, obj> =
+                [ "Apples", { new System.Object() with member x.ToString() = "Apples" }; "Oranges", { new System.Object() with member x.ToString() = "Oranges" }; "Bananas", { new System.Object() with member x.ToString() = "Bananas" } ]
+                |> dict
+
+            let bananas = inventory.["Bananas"]
+            printfn "bananas: %A" (bananas)
+            // inventory.Add("Pineapples", 0.85)
+            // inventory.Remove("Bananas")
+
+            let b = 
+                match a with 
+                | x -> 
+                    let y = box x     
+                    printfn "y: %A" (y.ToString())
+                    let z = unbox y
+                    printfn "z: %A" (z)
+            // Console.WriteLine(a)
+            printfn "relationship: %A" (b)
+            // printfn "relationship: %A" (a)
+            // printfn "relationship: %A" (d)
+            // let deserializer = new Mock<ICypherJsonDeserializer<string>>();
+            // Neo4jClient.Serialization.ICypherJsonDeserializer
+            // let startNodeChecksum = startNode.Properties.["Checksum"].ToString() |> getDataInDomainFormat<FVCOMInputDto>
+            // let detectTypeBoxed (v:obj) =
+            //     match v with      // used "box v"
+            //         | value -> 
+            //             let a = value :?> string
+            //             printfn "a:%s" a
+            //             printfn "something else"
+            // detectTypeBoxed startNodeChecksum
+            // let startNodeChecksum = startNode.Properties.As<FVCOMInputDto>()
+            // let endNodeChecksum = endNode.Properties.As<FVCOMInputDto>().Checksum
+            // printfn "startNodeChecksum:%A" startNodeChecksum
+            // printfn "endNodeChecksum:%s" endNodeChecksum
             match direction with
             | "TO" -> 
                 if acc = "" then
@@ -207,44 +259,77 @@ let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cyph
     ) 
     |> List.ofSeq
 
-let getRelatedNodesPath (relationship: string option, checksum: string) =
-    let queryMatch = 
+// 22/11/2021
+let getRelationshipAttributes (relationship: RelationshipDto) = 
+    match relationship with
+        | HasInputDTO v -> sprintf "{ SID: '%s' }" v.SID
+        | FileLocationIsDTO v -> sprintf "{ BasicPath: '%s' }" v.BasicPath
+
+let clientWithRelationshipWhereQuery (client: Neo4jClient.Cypher.ICypherFluentQuery) relationship relationshipProperty = 
+    match relationshipProperty with 
+    | Some p -> 
+        match relationship with 
+        | "HAS_INPUT" -> 
+            client
+                .Where(fun relationship -> relationship.SID = p)
+        | "BASIC_PATH" -> 
+            client
+                .Where(fun relationship -> relationship.BasicPath = p)
+        | _ -> client
+    | None -> client
+
+let getRelationships (relationship: string, maxPathLength: string, relationshipProperty: string option) =
+    let queryMatchTo = sprintf "p = (node)<-[relationship:%s]-(targetNode)" relationship
+
+    let clientTo = clientWithCypher.Match(queryMatchTo)
+    let clientWithRelationshipWhereTo = 
+        clientWithRelationshipWhereQuery clientTo relationship relationshipProperty
+    let resultTo =
+        clientWithRelationshipWhereTo
+            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
+            .ResultsAsync
+        |> Async.AwaitTask |> Async.RunSynchronously 
+    // for i in resultTo do
+    //     printfn "resultTo: %s" i
+        |> getResult "TO"
+    // let queryMatchFrom = sprintf "p = (node)-[relationship:%s]->(targetNode)" relationship
+    // let clientFrom = clientWithCypher.Match(queryMatchFrom)
+    // let clientWithRelationshipWhereFrom = 
+    //     clientWithRelationshipWhereQuery clientFrom relationship relationshipProperty
+    // let resultFrom =
+    //     clientWithRelationshipWhereFrom
+    //         .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
+    //         .ResultsAsync
+    //     |> Async.AwaitTask |> Async.RunSynchronously 
+    //     |> getResult "FROM"
+    resultTo |> List.distinct
+
+let getRelatedNodesPath (relationship: string option, checksum: string, maxPathLength: string) =
+    let queryMatchTo = 
         match relationship with
-        | Some r -> sprintf "p = (node)<-[:%s*]-(targetNode)" r
-        | None -> sprintf "p = (node)<-[*]-(targetNode)"
-    let result =
+        | Some r -> sprintf "p = (node)<-[:%s%s]-(targetNode)" r maxPathLength
+        | None -> sprintf "p = (node)<-[%s]-(targetNode)" maxPathLength
+    let resultTo =
         clientWithCypher
-            .Match(queryMatch)
+            .Match(queryMatchTo)
             .Where(fun node -> node.Checksum = checksum)
-            .Return(fun p node -> p.As())
+            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
             .ResultsAsync
         |> Async.AwaitTask |> Async.RunSynchronously 
         |> getResult "TO"
-    let queryMatch' = 
+    let queryMatchFrom = 
         match relationship with
-        | Some r -> sprintf "p = (node)-[:%s*]->(targetNode)" r
-        | None -> sprintf "p = (node)-[*]->(targetNode)"
-    let result' =
+        | Some r -> sprintf "p = (node)-[:%s%s]->(targetNode)" r maxPathLength
+        | None -> sprintf "p = (node)-[%s]->(targetNode)" maxPathLength
+    let resultFrom =
         clientWithCypher
-            .Match(queryMatch')
+            .Match(queryMatchFrom)
             .Where(fun node -> node.Checksum = checksum)
-            .Return(fun p node -> p.As())
+            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
             .ResultsAsync
         |> Async.AwaitTask |> Async.RunSynchronously 
         |> getResult "FROM"
-    result @ result'
-
-// 10/11/2021
-let getDataInDomainFormat<'T> (node: string) =
-    Json.deserialize<'T> (node)
-
-// 9/11/2021
-let toListInDomainFormat (nodes: seq<string * seq<string>>) = 
-    nodes 
-        |> Seq.map (fun (dto) -> 
-            dto |> Node.toDomain
-        ) 
-        |> List.ofSeq
+    resultTo @ resultFrom
 
 let getAllRelationship () =
     let queryMatch = sprintf "(node)-[r]->(result)" 
@@ -269,48 +354,6 @@ let getNodeByChecksum (checksum: string) =
         result |> Async.AwaitTask |> Async.RunSynchronously
         |> toListInDomainFormat
     nodes
-
-let getRelatedNodes (relationship: string option, checksum: string) =
-    let queryMatch = 
-        match relationship with
-        | Some r -> sprintf "(node)<-[relationship:%s]-(targetNode)" r
-        | None -> sprintf "(node)<-[relationship]-(targetNode)"
-    let result =
-        clientWithCypher
-            .Match(queryMatch)
-            .Where(fun node -> node.Checksum = checksum)
-            .Return(fun targetNode relationship -> targetNode.As(), targetNode.Labels(), relationship.Type())
-            .ResultsAsync
-        |> Async.AwaitTask |> Async.RunSynchronously 
-    let nodes = 
-        Seq.map (fun (dto) -> 
-            let (node, nodeLabels, relationshipLabel) = dto
-            let nodeInfo = (node, nodeLabels) |> Node.toDomain
-            let result = sprintf "Source Node:%s <-----%s----- Node:%s(%A)" checksum relationshipLabel nodeInfo.Checksum nodeInfo.Labels
-            result
-        ) result
-        |> List.ofSeq
-
-    let queryMatch' = 
-        match relationship with
-        | Some r -> sprintf "(node)-[relationship:%s]->(targetNode)" r
-        | None -> sprintf "(node)-[relationship]->(targetNode)"
-    let result' =
-        clientWithCypher
-            .Match(queryMatch')
-            .Where(fun node -> node.Checksum = checksum)
-            .Return(fun targetNode relationship -> targetNode.As(), targetNode.Labels(), relationship.Type())
-            .ResultsAsync
-        |> Async.AwaitTask |> Async.RunSynchronously 
-    let nodes' = 
-        Seq.map (fun (dto) -> 
-            let (node, nodeLabels, relationshipLabel) = dto
-            let nodeInfo = (node, nodeLabels) |> Node.toDomain
-            let result = sprintf "Source Node:%s -----%s-----> Node:%s(%A)" checksum relationshipLabel nodeInfo.Checksum nodeInfo.Labels
-            result
-        ) result'
-        |> List.ofSeq
-    nodes @ nodes'
 
 let getNodesByLabel (label: string) =
     let queryMatch = sprintf "(node: %s)" label
@@ -374,12 +417,17 @@ let createMultipleNodesIfNotExist nodes =
         let message = sprintf "Exception in creating nodes: %s" error.Message
         Error(message)
 
-let relateNodes (sourceNode': Node) (targetNode': Node) (relationship: string) =
+let relateNodes (sourceNode': Node) (targetNode': Node) (relationship: string) (relationshipProperty: RelationshipDto option) =
     let sourceNodeAttributes = getNodeAttributes(sourceNode')
     let targetNodeAttributes = getNodeAttributes(targetNode')
     let querySource = sprintf "(sourceNode:%s)" sourceNodeAttributes.Label 
     let queryTarget = sprintf "(targetNode:%s)" targetNodeAttributes.Label
-    let queryRelationship = sprintf "(sourceNode)-[:%s]->(targetNode)" relationship
+    let queryRelationship = 
+        match relationshipProperty with
+        | Some p -> 
+            let relationshipAttributes = getRelationshipAttributes(p)
+            sprintf "(sourceNode)-[:%s%s]->(targetNode)" relationship relationshipAttributes
+        | None -> sprintf "(sourceNode)-[:%s]->(targetNode)" relationship
     clientWithCypher
         .Match(querySource, queryTarget)
         .Where(fun (sourceNode) -> sourceNode.Checksum = sourceNodeAttributes.KeyValue)
@@ -454,11 +502,12 @@ let deleteDemoGrid () = deleteNode demoGrid
 let createInitNodesIfNotExist () = createMultipleNodesIfNotExist initFVCOMInput
 
 let relateInitNodes () = 
-    // relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
-    // relateNodes demoGrid demoGridFile "FILE_LOCATION_IS"
-    // relateNodes demoFVCOMInput demoFVCOMInputFile "FILE_LOCATION_IS"
-    // relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT"
-    relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT"
+    relateNodes demoFVCOMInput1 demoFVCOMInput2 "HAS_INPUT" (Some demoHasInput1)
+    relateNodes demoFVCOMInput2 demoGrid "HAS_INPUT" (Some demoHasInput2)
+    relateNodes demoFVCOMInput2 demoGridFile "FILE_LOCATION_IS" (Some demoFileLocationis2)
+    relateNodes demoFVCOMInput2 demoFVCOMInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
+    relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
+    relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
     // relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
 
 let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid
