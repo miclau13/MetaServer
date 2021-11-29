@@ -1,0 +1,83 @@
+{
+  "FVCOMInput": {
+    "Properties": [
+      "CASE_TITLE",
+      "TIMEZONE",
+      "DATE_FORMAT",
+      "START_DATE",
+      "END_DATE"
+    ],
+    "Label": "FVCOMInput"
+  },
+  "STARTUP": {
+    "Properties": [
+      "STARTUP_TYPE",
+      "STARTUP_FILE"
+    ],
+    "Label": "STARTUP"
+  },
+  "IO": {
+    "Properties": [
+      "INPUT_DIR",
+      "OUTPUT_DIR"
+    ],
+    "Label": "IOInput"
+  },
+  "NETCDF": {
+    "Properties": [
+      "NC_FIRST_OUT",
+      "NC_OUT_INTERVAL",
+      "NC_OUTPUT_STACK"
+    ],
+    "Label": "NETCDF"
+  },
+  "WIND": {
+    "Properties": [
+      "WIND_TYPE",
+      "WIND_FILE"
+    ],
+    "Label": "WIND"
+  },
+  "HEATING": {
+    "Properties": [
+      "HEATING_TYPE",
+      "HEATING_FILE"
+    ],
+    "Label": "HEATING"
+  },
+  "AIRPRESSURE_FILE": {
+    "Properties": [
+      "AIRPRESSURE_KIND",
+      "AIRPRESSURE_FILE"
+    ],
+    "Label": "AIRPRESSURE_FILE"
+  },  
+  "WAVE": {
+    "Properties": [
+      "WAVE_KIND",
+      "WAVE_FILE"
+    ],
+    "Label": "WAVE"
+  },  
+  "OBC": {
+    "Properties": [
+      "OBC_NODE_LIST_FILE",
+      "OBC_ELEVATION_FILE"
+    ],
+    "Label": "OBC"
+  },
+  "RIVER": {
+    "Properties": [
+      "RIVER_NUMBER",
+      "RIVER_INFO_FILE"
+    ],
+    "Label": "RIVER"
+  },
+  "GRID_COORDINATES": {
+    "Properties": [
+      "GRID_FILE",
+      "GRID_FILE_UNITS"
+    ],
+    "Label": "GRID_COORDINATES"
+  }
+}

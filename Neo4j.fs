@@ -45,55 +45,6 @@ type River = {
 
 let clientWithCypher = Db.getDbClient ()
 
-// let demoGrid = Grid {
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c7a"
-//     NodeNumber = NodeNumber 18
-// }
-
-// let demoGridFile = File {
-//     Path = Path "/minio/demo/PO6/grid/"
-//     Name = Name "grid1"
-//     Format = Format "grd"
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c7z"
-// }
-
-// let demoFVCOMInput = FVCOMInput {
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c7b"
-//     StartDate = StartDate "18/11/2021"
-//     EndDate = EndDate "19/11/2021"
-// }
-
-// let demoFVCOMInputFile = File {
-//     Path = Path "/minio/demo/PO6/"
-//     Name = Name "run"
-//     Format = Format "nml"
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c7y"
-// }
-
-// let demoGrid = Grid {
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6a"
-//     NodeNumber = NodeNumber 3
-// }
-
-// let demoGridFile = File {
-//     Path = Path "/minio/demo/PO7/grid/"
-//     Name = Name "grid1"
-//     Format = Format "grd"
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6z"
-// }
-
-// let demoFVCOMInput = FVCOMInput {
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6b"
-//     StartDate = StartDate "08/11/2021"
-//     EndDate = EndDate "09/11/2021"
-// }
-
-// let demoFVCOMInputFile = File {
-//     Path = Path "/minio/demo/PO7/"
-//     Name = Name "run"
-//     Format = Format "nml"
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c6y"
-// }
 let demoHasInput1 = HasInputDTO { SID = "1" }
 let demoHasInput2 = HasInputDTO { SID = "2" }
 let demoFileLocationis1 = FileLocationIsDTO { BasicPath = "root" }
@@ -111,29 +62,29 @@ let demoGridFile = File {
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8z"
 }
 
-let demoFVCOMInput = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c10b"
-    StartDate = StartDate "28/12/2021"
-    EndDate = EndDate "29/12/2021"
-}
+// let demoFVCOMInput = FVCOMInput {
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c10b"
+//     StartDate = StartDate "28/12/2021"
+//     EndDate = EndDate "29/12/2021"
+// }
 
-let demoFVCOMInput1 = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c9b"
-    StartDate = StartDate "28/12/2021"
-    EndDate = EndDate "29/12/2021"
-}
+// let demoFVCOMInput1 = FVCOMInput {
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c9b"
+//     StartDate = StartDate "28/12/2021"
+//     EndDate = EndDate "29/12/2021"
+// }
 
-let demoFVCOMInput2 = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8b"
-    StartDate = StartDate "28/12/2021"
-    EndDate = EndDate "29/12/2021"
-}
+// let demoFVCOMInput2 = FVCOMInput {
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8b"
+//     StartDate = StartDate "28/12/2021"
+//     EndDate = EndDate "29/12/2021"
+// }
 
-let demoFVCOMInput3 = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c11b"
-    StartDate = StartDate "18/12/2021"
-    EndDate = EndDate "19/12/2021"
-}
+// let demoFVCOMInput3 = FVCOMInput {
+//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c11b"
+//     StartDate = StartDate "18/12/2021"
+//     EndDate = EndDate "19/12/2021"
+// }
 
 let demoFVCOMInputFile = File {
     Path = Path "/minio/demo/PO8/"
@@ -142,42 +93,31 @@ let demoFVCOMInputFile = File {
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8y"
 }
 
-// let runNML = {
-//     Path = "/work/jonas/Ti1"
-//     Name = "Ti1_run"
-//     Format = "nml"
-//     Checksum = "883caa0d769cf15d52a25916105db81152fd5a4e78642a7f39d57e13421bf7e4"
-// }
-
-// let riverNamelistNML = {
-//     Path = "/work/jonas/Ti1"
-//     Name = "RiverNamelist"
-//     Format = "nml"
-//     Checksum = "1942d76f855b979531bae445451e1ffbd8b168ea0f01f1d1511c38e23c678d66"
-// }
-
-// let river1 = {
-//     RiverName = "026.Z - SIRA _ 02"
-//     Checksum = "xab"
-//     RiverGridLocation = 435
-//     RiverVerticalDistribution = [0.00177;0.00210]
-//     RiverFile = "riverdata.nc"
-// }
-
-let initNodes = [demoGrid; demoFVCOMInputFile; demoGridFile; demoFVCOMInput]
-let initGrids = [demoGrid]
-let initGridsLabels = ["Grid"]
-let initFiles = [demoFVCOMInputFile; demoGridFile]
-let initFilesLabels = ["File"]
-let initFVCOMInput = [demoFVCOMInput; demoFVCOMInput1; demoFVCOMInput2; demoFVCOMInput3; demoGrid; demoGridFile]
-let initFVCOMInputLabels = ["FVCOMInput"]
+// let initNodes = [demoGrid; demoFVCOMInputFile; demoGridFile; demoFVCOMInput]
+// let initGrids = [demoGrid]
+// let initGridsLabels = ["Grid"]
+// let initFiles = [demoFVCOMInputFile; demoGridFile]
+// let initFilesLabels = ["File"]
+// let initFVCOMInput = [demoFVCOMInput; demoFVCOMInput1; demoFVCOMInput2; demoFVCOMInput3; demoGrid; demoGridFile]
+// let initFVCOMInputLabels = ["FVCOMInput"]
 
 let getNodeLabel (node: Node) =
     let label =
         match node with
         | File _ -> nameof File
         | Grid _ -> nameof Grid
+        | AirPressureInput _ -> nameof AirPressureInput
         | FVCOMInput _ -> nameof FVCOMInput
+        | GridCoordinatesInput _ -> nameof GridCoordinatesInput
+        | HeatingInput _ -> nameof HeatingInput
+        | IOInput _ -> nameof IOInput
+        | NetCDFInput _ -> nameof NetCDFInput
+        | OBCInput _ -> nameof OBCInput
+        | RiverInput _ -> nameof RiverInput
+        | StartupInput _ -> nameof StartupInput
+        | StartupXInput _ -> nameof StartupXInput
+        | WaveInput _ -> nameof WaveInput
+        | WindInput _ -> nameof WindInput
     label
 
 // 10/11/2021
@@ -188,7 +128,7 @@ let getDataInDomainFormat<'T> (node: string) =
 let toListInDomainFormat (nodes: seq<string * seq<string>>) = 
     nodes 
     |> Seq.map (fun (dto) -> 
-        dto |> Node.toDomain
+        dto |> NodeDto.toDomain
     ) 
     |> List.ofSeq
 
@@ -206,43 +146,6 @@ let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cyph
             let relationshipType = relationship.Type
             let startNode = nodedIdToNodeMap.Item startNodeId
             let endNode = nodedIdToNodeMap.Item endNodeId
-            let d = relationship.Properties.Item "SID"
-            // let c = relationship.Properties.[0]
-            let a = relationship.Properties.["SID"]
-            let inventory : IDictionary<string, obj> =
-                [ "Apples", { new System.Object() with member x.ToString() = "Apples" }; "Oranges", { new System.Object() with member x.ToString() = "Oranges" }; "Bananas", { new System.Object() with member x.ToString() = "Bananas" } ]
-                |> dict
-
-            let bananas = inventory.["Bananas"]
-            printfn "bananas: %A" (bananas)
-            // inventory.Add("Pineapples", 0.85)
-            // inventory.Remove("Bananas")
-
-            let b = 
-                match a with 
-                | x -> 
-                    let y = box x     
-                    printfn "y: %A" (y.ToString())
-                    let z = unbox y
-                    printfn "z: %A" (z)
-            // Console.WriteLine(a)
-            printfn "relationship: %A" (b)
-            // printfn "relationship: %A" (a)
-            // printfn "relationship: %A" (d)
-            // let deserializer = new Mock<ICypherJsonDeserializer<string>>();
-            // Neo4jClient.Serialization.ICypherJsonDeserializer
-            // let startNodeChecksum = startNode.Properties.["Checksum"].ToString() |> getDataInDomainFormat<FVCOMInputDto>
-            // let detectTypeBoxed (v:obj) =
-            //     match v with      // used "box v"
-            //         | value -> 
-            //             let a = value :?> string
-            //             printfn "a:%s" a
-            //             printfn "something else"
-            // detectTypeBoxed startNodeChecksum
-            // let startNodeChecksum = startNode.Properties.As<FVCOMInputDto>()
-            // let endNodeChecksum = endNode.Properties.As<FVCOMInputDto>().Checksum
-            // printfn "startNodeChecksum:%A" startNodeChecksum
-            // printfn "endNodeChecksum:%s" endNodeChecksum
             match direction with
             | "TO" -> 
                 if acc = "" then
@@ -265,43 +168,21 @@ let getRelationshipAttributes (relationship: RelationshipDto) =
         | HasInputDTO v -> sprintf "{ SID: '%s' }" v.SID
         | FileLocationIsDTO v -> sprintf "{ BasicPath: '%s' }" v.BasicPath
 
-let clientWithRelationshipWhereQuery (client: Neo4jClient.Cypher.ICypherFluentQuery) relationship relationshipProperty = 
-    match relationshipProperty with 
-    | Some p -> 
-        match relationship with 
-        | "HAS_INPUT" -> 
-            client
-                .Where(fun relationship -> relationship.SID = p)
-        | "BASIC_PATH" -> 
-            client
-                .Where(fun relationship -> relationship.BasicPath = p)
-        | _ -> client
-    | None -> client
-
-let getRelationships (relationship: string, maxPathLength: string, relationshipProperty: string option) =
-    let queryMatchTo = sprintf "p = (node)<-[relationship:%s]-(targetNode)" relationship
-
-    let clientTo = clientWithCypher.Match(queryMatchTo)
-    let clientWithRelationshipWhereTo = 
-        clientWithRelationshipWhereQuery clientTo relationship relationshipProperty
-    let resultTo =
-        clientWithRelationshipWhereTo
+let getRelationships (relationship: string, relationshipProperty: string, relationshipPropertyValue: string) =
+    let queryMatchTo = sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship relationshipProperty relationshipPropertyValue
+    let result =
+        clientWithCypher.Match(queryMatchTo)
             .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
             .ResultsAsync
         |> Async.AwaitTask |> Async.RunSynchronously 
-    // for i in resultTo do
-    //     printfn "resultTo: %s" i
+    for i in result do
+        printfn "result: %s" i
+    let resultTo =
+        clientWithCypher.Match(queryMatchTo)
+            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
+            .ResultsAsync
+        |> Async.AwaitTask |> Async.RunSynchronously 
         |> getResult "TO"
-    // let queryMatchFrom = sprintf "p = (node)-[relationship:%s]->(targetNode)" relationship
-    // let clientFrom = clientWithCypher.Match(queryMatchFrom)
-    // let clientWithRelationshipWhereFrom = 
-    //     clientWithRelationshipWhereQuery clientFrom relationship relationshipProperty
-    // let resultFrom =
-    //     clientWithRelationshipWhereFrom
-    //         .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
-    //         .ResultsAsync
-    //     |> Async.AwaitTask |> Async.RunSynchronously 
-    //     |> getResult "FROM"
     resultTo |> List.distinct
 
 let getRelatedNodesPath (relationship: string option, checksum: string, maxPathLength: string) =
@@ -369,15 +250,38 @@ let getNodesByLabel (label: string) =
 // 8/11/2021
 let getClientWithNodeInputParameter (client: Cypher.ICypherFluentQuery) (node: Node) = 
     match node with 
-        | File file -> client.WithParam("node", (File.fromDomain file))
-        | Grid grid -> client.WithParam("node", (Grid.fromDomain grid))
-        | FVCOMInput fvcomInput -> client.WithParam("node", (FVCOMInput.fromDomain fvcomInput))
+        | File file -> client.WithParam("node", (FileDto.fromDomain file))
+        | Grid grid -> client.WithParam("node", (GridDto.fromDomain grid))
+        | AirPressureInput input -> client.WithParam("node", (AirPressureInputDto.fromDomain input))
+        | FVCOMInput input -> client.WithParam("node", (FVCOMInputDto.fromDomain input))
+        | GridCoordinatesInput input -> client.WithParam("node", (GridCoordinatesInputDto.fromDomain input))
+        | HeatingInput input -> client.WithParam("node", (HeatingInputDto.fromDomain input))
+        | IOInput input -> client.WithParam("node", (IOInputDto.fromDomain input))
+        | NetCDFInput input -> client.WithParam("node", (NetCDFInputDto.fromDomain input))
+        | OBCInput input -> client.WithParam("node", (OBCInputDto.fromDomain input))
+        | RiverInput input -> client.WithParam("node", (RiverInputDto.fromDomain input))
+        | StartupInput input -> client.WithParam("node", (StartupInputDto.fromDomain input))
+        | StartupXInput input -> client.WithParam("node", (StartupXInputDto.fromDomain input))
+        | WaveInput input -> client.WithParam("node", (WaveInputDto.fromDomain input))
+        | WindInput input -> client.WithParam("node", (WindInputDto.fromDomain input))
+
 
 let getNodeAttributes (node: Node) = 
     match node with
         | File file -> { Label = "File"; Key = "Checksum"; KeyValue = file.Checksum |> Checksum.value }
         | Grid grid -> { Label = "Grid"; Key = "Checksum"; KeyValue = grid.Checksum |> Checksum.value }
-        | FVCOMInput fvcomInput -> { Label = "FVCOMInput"; Key = "Checksum"; KeyValue = fvcomInput.Checksum |> Checksum.value }
+        | AirPressureInput input -> { Label = "AirPressureInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | FVCOMInput input -> { Label = "FVCOMInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | GridCoordinatesInput input -> { Label = "GridCoordinatesInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | HeatingInput input -> { Label = "HeatingInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | IOInput input -> { Label = "IOInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | NetCDFInput input -> { Label = "NetCDFInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | OBCInput input -> { Label = "OBCInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | RiverInput input -> { Label = "RiverInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | StartupInput input -> { Label = "StartupInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | StartupXInput input -> { Label = "StartupXInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | WaveInput input -> { Label = "WaveInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | WindInput input -> { Label = "WindInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
 
 let getAllNodes () =
     let result =
@@ -499,15 +403,16 @@ let update (node: Node) =
 
 let deleteDemoGrid () = deleteNode demoGrid
 
-let createInitNodesIfNotExist () = createMultipleNodesIfNotExist initFVCOMInput
+let createInitNodesIfNotExist () = createMultipleNodesIfNotExist []
 
 let relateInitNodes () = 
-    relateNodes demoFVCOMInput1 demoFVCOMInput2 "HAS_INPUT" (Some demoHasInput1)
-    relateNodes demoFVCOMInput2 demoGrid "HAS_INPUT" (Some demoHasInput2)
-    relateNodes demoFVCOMInput2 demoGridFile "FILE_LOCATION_IS" (Some demoFileLocationis2)
-    relateNodes demoFVCOMInput2 demoFVCOMInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
-    relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
-    relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
+    // relateNodes demoFVCOMInput1 demoFVCOMInput2 "HAS_INPUT" (Some demoHasInput1)
+    // relateNodes demoFVCOMInput2 demoGrid "HAS_INPUT" (Some demoHasInput2)
+    // relateNodes demoFVCOMInput2 demoGridFile "FILE_LOCATION_IS" (Some demoFileLocationis2)
+    // relateNodes demoFVCOMInput2 demoFVCOMInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
+    // relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
+    // relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
     // relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
+    printfn "%A" "relateInitNodes"
 
 let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid

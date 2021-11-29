@@ -2,6 +2,7 @@
 
 open System
 open Argu
+open Parser
 
 type CliError =
     | ArgumentsNotSpecified
@@ -20,33 +21,73 @@ with
             | Init _ -> "Init nodes and relationships"
 and InitArgs =
     | [<AltCommandLine("-a")>] All
+    | [<AltCommandLine("-c")>] Config of msg:string
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | All -> "Init all."
+            | Config _ -> "Read the config."
 
 and ListArgs =
     | [<AltCommandLine("-a")>] All
-    | [<AltCommandLine("-s")>] Start of msg:string
     | [<AltCommandLine("-l")>] Label of msg:string
     | [<AltCommandLine("-r")>] Relationship of msg:string option
     | [<AltCommandLine("-cs")>] Checksum of msg:string
     | [<AltCommandLine("-mpl")>] MaxPathLength of msg:string
     | [<AltCommandLine("-rp")>] RelationshipProperty of msg:string
+    | [<AltCommandLine("-rpv")>] RelationshipPropertyValue of msg:string
 
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | All -> "List all Grids."
-            | Start _ -> "Use the given <start> as the starting date."
             | Label _ -> "Find the corresping nodes with the <label>."
             | Relationship _ -> "Find the Relationship of the node."
             | Checksum _ -> "List the node by <checksum>."
             | MaxPathLength _ -> "Specify maximum the path length."
-            | RelationshipProperty _ -> "Specify Relationship properties."
+            | RelationshipProperty _ -> "Specify Relationship property."
+            | RelationshipPropertyValue _ -> "Specify Relationship property value."
 
 let runInit (runArgs: ParseResults<InitArgs>) =
     match runArgs with
+    | argz when argz.Contains(Config) ->
+        // Get the config
+        let configArgs = runArgs.GetResult(Config)
+        try
+            let text = IO.File.ReadAllText configArgs
+            let textResult = Parser.textWithoutSpaces text
+            // printfn "textResult':%A" textResult
+            match textResult with
+            | Ok r ->
+                let resultInDomain = r |> Input.parserResultToDomain
+                printfn "resultInDomain: %A" resultInDomain
+                let validInputResults = 
+                    resultInDomain |> Array.filter (fun item -> 
+                        match item with 
+                        | Ok _ -> true
+                        | _ -> false
+                    )
+                let input = 
+                    validInputResults 
+                    |> Array.Parallel.map (fun item -> 
+                        match item with 
+                        | Ok v -> v
+                        | Error e -> failwith e
+                    )
+                    |> Array.toList
+                // Neo4j.deleteAllNodes()
+                // let result = Neo4j.createMultipleNodesIfNotExist input
+                // printfn "Result: %A " result
+                // Neo4j.relateInitNodes ()
+                Ok ()
+            | Error e -> 
+                let errorMessage = sprintf "E: %A" e
+                printfn "E: %A" errorMessage
+                Error ArgumentsNotSpecified
+        with 
+            ex -> 
+                printfn "%s" ex.Message
+                Error ArgumentsNotSpecified
     | _ ->
         Neo4j.deleteAllNodes()
         let result = Neo4j.createInitNodesIfNotExist ()
@@ -59,12 +100,6 @@ let runList (runArgs: ParseResults<ListArgs>) =
     | argz when argz.Contains(All) ->
         let result = Neo4j.getAllNodes ()
         printfn "Result: %A " result
-        Ok ()
-    | argz when argz.Contains(Start) ->
-        // Get the start date 
-        let startArgs = runArgs.GetResult(Start)
-        // List all grid using Neo4j
-        printfn "%A %A" "startArgs:" startArgs
         Ok ()
     | argz when argz.Contains(Label) ->
         // Get the label
@@ -89,25 +124,25 @@ let runList (runArgs: ParseResults<ListArgs>) =
     | argz when argz.Contains(Relationship) ->
         // Get the relationship
         let relationship = runArgs.GetResult(Relationship)
-        // Get the maximum path length if any
-        let maxPathLength = 
-            match argz.Contains(MaxPathLength) with
-            | true -> sprintf "*..%s" (runArgs.GetResult(MaxPathLength))
-            | false -> "*"
         match relationship with
         | Some r -> 
             // Get the relationship properties if any
             match argz.Contains(RelationshipProperty) with
             | true -> 
                 let relationshipProperty = runArgs.GetResult(RelationshipProperty)
-                let result = Neo4j.getRelationships(r, maxPathLength, Some relationshipProperty)
-                printfn "%A" result
-                Ok ()
-                // sprintf "*..%s" (runArgs.GetResult(RelationshipProperty))
+                match argz.Contains(RelationshipPropertyValue) with
+                | true -> 
+                    let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
+                    let result = Neo4j.getRelationships(r, relationshipProperty, relationshipPropertyValue)
+                    printfn "%A" result
+                    Ok ()
+                    // sprintf "*..%s" (runArgs.GetResult(RelationshipProperty))
+                | false ->
+                    printfn "%s" "No Relationship property value provided"
+                    Error ArgumentsNotSpecified
             | false ->
-                let result = Neo4j.getRelationships(r, maxPathLength, None)
-                printfn "%A" result
-                Ok ()
+                printfn "%s" "No Relationship property value provided"
+                Error ArgumentsNotSpecified
         | None -> 
             let result = Neo4j.getAllRelationship()
             for i in result do
