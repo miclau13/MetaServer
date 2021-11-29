@@ -23,8 +23,11 @@ type Input =
 // create an active pattern
 open System.Text.RegularExpressions
 let (|RegexGroup|_|) pattern input =
-    let m = Regex.Match(input,pattern)
+    let m = Regex.Match(input, pattern)
     if (m.Success) then Some m.Groups.[1].Value else None
+let (|RegexTitle|_|) pattern input =
+    let m = Regex.Match(input, pattern)
+    if (m.Success) then Some input else None
 
 let getChecksum (str: string) = 
   let bytes = 
@@ -34,12 +37,11 @@ let getChecksum (str: string) =
   result
 
 let getProperty (str: string) (property: string) =
-        let regex = sprintf ".*?%s(?:\s*=\s*)'*(.*)'+," property
-        match str with
-        | RegexGroup regex str ->
-              printfn "getProperty str: %s" str
-              str
-        | _ -> "Something else"
+    let regex = sprintf ".*?%s(?:\s*=\s*'*)([^',]*)(?:'*\s*)," property
+    match str with
+    | RegexGroup regex str ->
+          str
+    | _ -> "Something else"
 
 module RawInput = 
     let toDomain (str: string) =
@@ -192,77 +194,79 @@ let parserResultToDomain (result: list<string>) =
     result 
     |> Array.ofList
     |> Array.fold(fun acc item -> 
+      // printfn "item: %s %A" item (Regex.IsMatch(item, "&NML_NETCDF\s"))
+    
       match item with 
-      | str when str.Contains("&NML_CASE") -> 
+      | RegexTitle "&NML_CASE\s" str -> 
         let result = str |> FVCOMInput.toDto |> Dto.FVCOMInputDto.toDomain 
         match result with 
         | Ok r -> Array.append acc [|(Ok (Domain.FVCOMInput r))|]
         | Error e -> Array.append acc [|Error e|]
-      | str when str.Contains("&NML_GRID_COORDINATES") -> 
+      | RegexTitle "&NML_GRID_COORDINATES\s" str -> 
         let result = str |> GridCoordinatesInput.toDto |> Dto.GridCoordinatesInputDto.toDomain 
         match result with 
         | Ok r -> Array.append acc [|(Ok (Domain.GridCoordinatesInput r))|]
         | Error e -> Array.append acc [|Error e|]
-      | str when str.Contains("&NML_IO") -> 
+      | RegexTitle "&NML_IO\s" str -> 
         let result = str |> IOInput.toDto |> Dto.IOInputDto.toDomain 
         match result with 
         | Ok r -> Array.append acc [|(Ok (Domain.IOInput r))|]
         | Error e -> Array.append acc [|Error e|]
-      | str when str.Contains("&NML_NETCDF") -> 
+      | RegexTitle "&NML_NETCDF\s" str -> 
         let result = str |> NetCDFInput.toDto |> Dto.NetCDFInputDto.toDomain 
         match result with 
         | Ok r -> Array.append acc [|(Ok (Domain.NetCDFInput r))|]
         | Error e -> Array.append acc [|Error e|]
-      // | str when str.Contains("&NML_OPEN_BOUNDARY_CONTROL") -> 
-      //   let result = str |> OBCInput.toDto |> Dto.OBCInputDto.toDomain 
-      //   match result with 
-      //   | Ok r -> Array.append acc [|(Ok (Domain.OBCInput r))|]
-      //   | Error e -> Array.append acc [|Error e|]
-      // | str when str.Contains("&NML_RIVER_TYPE") -> 
-      //   let result = str |> RiverInput.toDto |> Dto.RiverInputDto.toDomain 
-      //   match result with 
-      //   | Ok r -> Array.append acc [|(Ok (Domain.RiverInput r))|]
-      //   | Error e -> Array.append acc [|Error e|]
-      // | str when str.Contains("&NML_STARTUPX") ->
-      //   let result = str |> StartupXInput.toDto |> Dto.StartupXInputDto.toDomain 
-      //   match result with 
-      //   | Ok r -> Array.append acc [|(Ok (Domain.StartupXInput r))|]
-      //   | Error e -> Array.append acc [|Error e|]
-      // | str when str.Contains("&NML_STARTUP") ->
-      //   let result = str |> StartupInput.toDto |> Dto.StartupInputDto.toDomain 
-      //   match result with 
-      //   | Ok r -> Array.append acc [|(Ok (Domain.StartupInput r))|]
-      //   | Error e -> Array.append acc [|Error e|]
-      // | str when str.Contains("&NML_SURFACE_FORCING") ->
-      //   let airPressureInputResult = 
-      //     str 
-      //     |> AirPressureInput.toDto 
-      //     |> Dto.AirPressureInputDto.toDomain
-      //     |> function
-      //       | Ok r -> Ok (Domain.AirPressureInput r)
-      //       | Error e -> Error e
-      //   let heatingInputResult = 
-      //       str 
-      //       |> HeatingInput.toDto 
-      //       |> Dto.HeatingInputDto.toDomain 
-      //       |> function
-      //       | Ok r -> Ok (Domain.HeatingInput r)
-      //       | Error e -> Error e
-      //   let windInputResult = 
-      //     str 
-      //     |> WindInput.toDto 
-      //     |> Dto.WindInputDto.toDomain 
-      //     |> function
-      //       | Ok r -> Ok (Domain.WindInput r)
-      //       | Error e -> Error e
-      //   let waveInputResult = 
-      //     str 
-      //     |> WaveInput.toDto 
-      //     |> Dto.WaveInputDto.toDomain 
-      //     |> function
-      //       | Ok r -> Ok (Domain.WaveInput r)
-      //       | Error e -> Error e
-      //   Array.append acc [|airPressureInputResult; heatingInputResult; windInputResult; waveInputResult;|]
+      | RegexTitle "&NML_OPEN_BOUNDARY_CONTROL\s" str -> 
+        let result = str |> OBCInput.toDto |> Dto.OBCInputDto.toDomain 
+        match result with 
+        | Ok r -> Array.append acc [|(Ok (Domain.OBCInput r))|]
+        | Error e -> Array.append acc [|Error e|]
+      | RegexTitle "&NML_RIVER_TYPE\s" str -> 
+        let result = str |> RiverInput.toDto |> Dto.RiverInputDto.toDomain 
+        match result with 
+        | Ok r -> Array.append acc [|(Ok (Domain.RiverInput r))|]
+        | Error e -> Array.append acc [|Error e|]
+      | RegexTitle "&NML_STARTUPX\s" str ->
+        let result = str |> StartupXInput.toDto |> Dto.StartupXInputDto.toDomain 
+        match result with 
+        | Ok r -> Array.append acc [|(Ok (Domain.StartupXInput r))|]
+        | Error e -> Array.append acc [|Error e|]
+      | RegexTitle "&NML_STARTUP\s" str ->
+        let result = str |> StartupInput.toDto |> Dto.StartupInputDto.toDomain 
+        match result with 
+        | Ok r -> Array.append acc [|(Ok (Domain.StartupInput r))|]
+        | Error e -> Array.append acc [|Error e|]
+      | RegexTitle "&NML_SURFACE_FORCING\s" str ->
+        let airPressureInputResult = 
+          str 
+          |> AirPressureInput.toDto 
+          |> Dto.AirPressureInputDto.toDomain
+          |> function
+            | Ok r -> Ok (Domain.AirPressureInput r)
+            | Error e -> Error e
+        let heatingInputResult = 
+            str 
+            |> HeatingInput.toDto 
+            |> Dto.HeatingInputDto.toDomain 
+            |> function
+              | Ok r -> Ok (Domain.HeatingInput r)
+              | Error e -> Error e
+        let windInputResult = 
+          str 
+          |> WindInput.toDto 
+          |> Dto.WindInputDto.toDomain 
+          |> function
+            | Ok r -> Ok (Domain.WindInput r)
+            | Error e -> Error e
+        let waveInputResult = 
+          str 
+          |> WaveInput.toDto 
+          |> Dto.WaveInputDto.toDomain 
+          |> function
+            | Ok r -> Ok (Domain.WaveInput r)
+            | Error e -> Error e
+        Array.append acc [|airPressureInputResult; heatingInputResult; windInputResult; waveInputResult;|]
       | _ -> Array.append acc [|Error "No suitable toDomain"|] 
     ) Array.empty
     // |> printfn "parserResultToDomain result:%A" 
