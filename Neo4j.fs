@@ -62,29 +62,41 @@ let demoGridFile = File {
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8z"
 }
 
-// let demoFVCOMInput = FVCOMInput {
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c10b"
-//     StartDate = StartDate "28/12/2021"
-//     EndDate = EndDate "29/12/2021"
-// }
+let demoFVCOMInput = FVCOMInput {
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c10b"
+    StartDate = FVCOMInput.StartDate "28/12/2021"
+    EndDate = FVCOMInput.EndDate "29/12/2021"
+    CaseTitle = FVCOMInput.CaseTitle "Titania"
+    DateFormat = FVCOMInput.DateFormat"YMD"
+    TimeZone = FVCOMInput.TimeZone "UTC"
+}
 
-// let demoFVCOMInput1 = FVCOMInput {
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c9b"
-//     StartDate = StartDate "28/12/2021"
-//     EndDate = EndDate "29/12/2021"
-// }
+let demoFVCOMInput1 = FVCOMInput {
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c9b"
+    StartDate = FVCOMInput.StartDate "28/12/2021"
+    EndDate = FVCOMInput.EndDate "29/12/2021"
+    CaseTitle = FVCOMInput.CaseTitle "Titania"
+    DateFormat = FVCOMInput.DateFormat"YMD"
+    TimeZone = FVCOMInput.TimeZone "UTC"
+}
 
-// let demoFVCOMInput2 = FVCOMInput {
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8b"
-//     StartDate = StartDate "28/12/2021"
-//     EndDate = EndDate "29/12/2021"
-// }
+let demoFVCOMInput2 = FVCOMInput {
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8b"
+    StartDate = FVCOMInput.StartDate "28/12/2021"
+    EndDate = FVCOMInput.EndDate "29/12/2021"
+    CaseTitle = FVCOMInput.CaseTitle "Titania"
+    DateFormat = FVCOMInput.DateFormat"YMD"
+    TimeZone = FVCOMInput.TimeZone "UTC"
+}
 
-// let demoFVCOMInput3 = FVCOMInput {
-//     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c11b"
-//     StartDate = StartDate "18/12/2021"
-//     EndDate = EndDate "19/12/2021"
-// }
+let demoFVCOMInput3 = FVCOMInput {
+    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c11b"
+    StartDate = FVCOMInput.StartDate "18/12/2021"
+    EndDate = FVCOMInput.EndDate "19/12/2021"
+    CaseTitle = FVCOMInput.CaseTitle "Titania"
+    DateFormat = FVCOMInput.DateFormat"YMD"
+    TimeZone = FVCOMInput.TimeZone "UTC"
+}
 
 let demoFVCOMInputFile = File {
     Path = Path "/minio/demo/PO8/"
@@ -98,7 +110,7 @@ let demoFVCOMInputFile = File {
 // let initGridsLabels = ["Grid"]
 // let initFiles = [demoFVCOMInputFile; demoGridFile]
 // let initFilesLabels = ["File"]
-// let initFVCOMInput = [demoFVCOMInput; demoFVCOMInput1; demoFVCOMInput2; demoFVCOMInput3; demoGrid; demoGridFile]
+let initFVCOMInput = [demoFVCOMInput; demoFVCOMInput1; demoFVCOMInput2; demoFVCOMInput3; demoGrid; demoGridFile]
 // let initFVCOMInputLabels = ["FVCOMInput"]
 
 let getNodeLabel (node: Node) =
@@ -168,15 +180,22 @@ let getRelationshipAttributes (relationship: RelationshipDto) =
         | HasInputDTO v -> sprintf "{ SID: '%s' }" v.SID
         | FileLocationIsDTO v -> sprintf "{ BasicPath: '%s' }" v.BasicPath
 
-let getRelationships (relationship: string, relationshipProperty: string, relationshipPropertyValue: string) =
-    let queryMatchTo = sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship relationshipProperty relationshipPropertyValue
+let getRelationships (relationship: string, relationshipProperty: string option, relationshipPropertyValue: string option) =
+    // let queryMatchTo = sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship relationshipProperty relationshipPropertyValue
+    let queryMatchTo = 
+        match relationshipProperty with 
+        | Some p -> 
+            match relationshipPropertyValue with 
+            | Some pv -> sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship p pv
+            | None -> sprintf "p = (node)<-[relationship:%s]-(targetNode)" relationship
+        | None -> sprintf "p = (node)<-[relationship:%s]-(targetNode)" relationship
     let result =
         clientWithCypher.Match(queryMatchTo)
             .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
             .ResultsAsync
         |> Async.AwaitTask |> Async.RunSynchronously 
-    for i in result do
-        printfn "result: %s" i
+    // for i in result do
+    //     printfn "result: %s" i
     let resultTo =
         clientWithCypher.Match(queryMatchTo)
             .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
@@ -301,8 +320,6 @@ let createNodeIfNotExist (node: Node) =
     let nodeKeyValue = nodeAttributes.KeyValue
     let query = sprintf "(node:%s {%s: $nodeKeyValue})"  nodeLabel nodeKey
     let client' = getClientWithNodeInputParameter clientWithCypher node
-    printfn "query:%A" query
-    printfn "nodeKeyValue:%A" nodeKeyValue
     client'
         .Merge(query)
         .OnCreate()
@@ -403,15 +420,15 @@ let update (node: Node) =
 
 let deleteDemoGrid () = deleteNode demoGrid
 
-let createInitNodesIfNotExist () = createMultipleNodesIfNotExist []
+let createInitNodesIfNotExist () = createMultipleNodesIfNotExist initFVCOMInput
 
 let relateInitNodes () = 
-    // relateNodes demoFVCOMInput1 demoFVCOMInput2 "HAS_INPUT" (Some demoHasInput1)
-    // relateNodes demoFVCOMInput2 demoGrid "HAS_INPUT" (Some demoHasInput2)
-    // relateNodes demoFVCOMInput2 demoGridFile "FILE_LOCATION_IS" (Some demoFileLocationis2)
-    // relateNodes demoFVCOMInput2 demoFVCOMInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
-    // relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
-    // relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
+    relateNodes demoFVCOMInput1 demoFVCOMInput2 "HAS_INPUT" (Some demoHasInput1)
+    relateNodes demoFVCOMInput2 demoGrid "HAS_INPUT" (Some demoHasInput2)
+    relateNodes demoFVCOMInput2 demoGridFile "FILE_LOCATION_IS" (Some demoFileLocationis2)
+    relateNodes demoFVCOMInput2 demoFVCOMInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
+    relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
+    relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
     // relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
     printfn "%A" "relateInitNodes"
 

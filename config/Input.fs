@@ -50,10 +50,13 @@ module RawInput =
 
 module AirPressureInput = 
     let toDto (str: string) =
+      let File = getProperty str "AIRPRESSURE_FILE"
+      let Kind = getProperty str "AIRPRESSURE_KIND"
+      let Checksum = getChecksum (sprintf "AIRPRESSURE_FILE=%s,AIRPRESSURE_KIND=%s" File Kind)
       let result: Dto.AirPressureInputDto = {
-        File = getProperty str "AIRPRESSURE_FILE"
-        Kind = getProperty str "AIRPRESSURE_KIND"
-        Checksum = getChecksum str
+        File = File
+        Kind = Kind
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.AirPressureInputDto> = {
         data = result
@@ -61,13 +64,19 @@ module AirPressureInput =
       dto  
 module FVCOMInput = 
     let toDto (str: string) =
+      let CaseTitle = getProperty str "CASE_TITLE"
+      let TimeZone = getProperty str "TIMEZONE"
+      let DateFormat = getProperty str "DateFormat"
+      let StartDate = getProperty str "StartDate"
+      let EndDate = getProperty str "EndDate"
+      let Checksum = getChecksum (sprintf "CASE_TITLE=%s,TIMEZONE=%s,DateFormat=%s,StartDate=%s,EndDate=%s" CaseTitle TimeZone DateFormat StartDate EndDate)
       let result: Dto.FVCOMInputDto = {
-        CaseTitle = getProperty str "CASE_TITLE"
-        TimeZone = getProperty str "TIMEZONE"
-        DateFormat = getProperty str "DATE_FORMAT"
-        StartDate = getProperty str "START_DATE"
-        EndDate = getProperty str "END_DATE"
-        Checksum = getChecksum str
+        CaseTitle = CaseTitle
+        TimeZone = TimeZone
+        DateFormat = DateFormat
+        StartDate = StartDate
+        EndDate = EndDate
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.FVCOMInputDto> = {
         data = result
@@ -75,10 +84,13 @@ module FVCOMInput =
       dto
 module GridCoordinatesInput = 
     let toDto (str: string) =
+      let File = getProperty str "GRID_FILE"
+      let FileUnits = getProperty str "GRID_FILE_UNITS"
+      let Checksum = getChecksum (sprintf "GRID_FILE=%s,GRID_FILE_UNITS=%s" File FileUnits)
       let result: Dto.GridCoordinatesInputDto = {
-        File = getProperty str "GRID_FILE"
-        FileUnits = getProperty str "GRID_FILE_UNITS"
-        Checksum = getChecksum str
+        File = File
+        FileUnits = FileUnits
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.GridCoordinatesInputDto> = {
         data = result
@@ -86,10 +98,13 @@ module GridCoordinatesInput =
       dto
 module HeatingInput = 
     let toDto (str: string) =
+      let File = getProperty str "HEATING_FILE"
+      let Type = getProperty str "HEATING_TYPE"
+      let Checksum = getChecksum (sprintf "HEATING_FILE=%s,HEATING_TYPE=%s" File Type)
       let result: Dto.HeatingInputDto = {
-        Type = getProperty str "HEATING_TYPE"
-        File = getProperty str "HEATING_FILE"
-        Checksum = getChecksum str
+        File = File
+        Type = Type
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.HeatingInputDto> = {
         data = result
@@ -97,10 +112,13 @@ module HeatingInput =
       dto
 module IOInput = 
     let toDto (str: string) =
+      let InputDirectory = getProperty str "INPUT_DIR"
+      let OutputDirectory = getProperty str "OUTPUT_DIR"
+      let Checksum = getChecksum (sprintf "INPUT_DIR=%s,OUTPUT_DIR=%s" InputDirectory OutputDirectory)
       let result: Dto.IOInputDto = {
-        InputDirectory = getProperty str "INPUT_DIR"
-        OutputDirectory = getProperty str "OUTPUT_DIR"
-        Checksum = getChecksum str
+        InputDirectory = InputDirectory
+        OutputDirectory = OutputDirectory
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.IOInputDto> = {
         data = result
@@ -108,11 +126,15 @@ module IOInput =
       dto
 module NetCDFInput = 
     let toDto (str: string) =
+      let FirstOut = getProperty str "NC_FIRST_OUT"
+      let OutInterval = getProperty str "NC_OUT_INTERVAL"
+      let OutputStack = getProperty str "NC_OUTPUT_STACK"
+      let Checksum = getChecksum (sprintf "NC_FIRST_OUT=%s,NC_OUT_INTERVAL=%s,NC_OUTPUT_STACK=%s" FirstOut OutInterval OutputStack)
       let result: Dto.NetCDFInputDto = {
-        FirstOut = getProperty str "NC_FIRST_OUT"
+        FirstOut = FirstOut
         OutInterval = getProperty str "NC_OUT_INTERVAL"
         OutputStack = int (getProperty str "NC_OUTPUT_STACK")
-        Checksum = getChecksum str
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.NetCDFInputDto> = {
         data = result
@@ -120,10 +142,13 @@ module NetCDFInput =
       dto
 module OBCInput = 
     let toDto (str: string) =
+      let ElevationFile = getProperty str "OBC_ELEVATION_FILE"
+      let NodeListFile = getProperty str "OBC_NODE_LIST_FILE"
+      let Checksum = getChecksum (sprintf "OBC_ELEVATION_FILE=%s,OBC_NODE_LIST_FILE=%s" ElevationFile NodeListFile)
       let result: Dto.OBCInputDto = {
-        ElevationFile = getProperty str "OBC_ELEVATION_FILE"
-        NodeListFile = getProperty str "OBC_NODE_LIST_FILE"
-        Checksum = getChecksum str
+        ElevationFile = ElevationFile
+        NodeListFile = NodeListFile
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.OBCInputDto> = {
         data = result
@@ -131,11 +156,15 @@ module OBCInput =
       dto
 module RiverInput = 
     let toDto (str: string) =
+      let InfoFile = getProperty str "RIVER_INFO_FILE"
+      let Kind = getProperty str "RIVER_KIND"
+      let Number = getProperty str "RIVER_NUMBER"
+      let Checksum = getChecksum (sprintf "RIVER_INFO_FILE=%s,RIVER_KIND=%s,RIVER_NUMBER=%s" InfoFile Kind Number) 
       let result: Dto.RiverInputDto = {
-        InfoFile = getProperty str "RIVER_INFO_FILE"
-        Number = int (getProperty str "RIVER_NUMBER")
-        Kind = getProperty str "RIVER_KIND"
-        Checksum = getChecksum str
+        InfoFile = InfoFile
+        Kind = Kind
+        Number = int Number
+        Checksum =Checksum
       }
       let dto: Dto.Dto<Dto.RiverInputDto> = {
         data = result
@@ -144,10 +173,13 @@ module RiverInput =
 
 module StartupInput = 
     let toDto (str: string) =
+      let File = getProperty str "STARTUP_FILE"
+      let Type = getProperty str "STARTUP_TYPE"
+      let Checksum = getChecksum (sprintf "STARTUP_FILE=%s,STARTUP_TYPE=%s" File Type)
       let result: Dto.StartupInputDto = {
-        Type = getProperty str "STARTUP_TYPE"
-        File = getProperty str "STARTUP_FILE"
-        Checksum = getChecksum str
+        File = File
+        Type = Type
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.StartupInputDto> = {
         data = result
@@ -156,10 +188,13 @@ module StartupInput =
 
 module StartupXInput = 
     let toDto (str: string) =
+      let File = getProperty str "STARTUP_FILE"
+      let Type = getProperty str "STARTUP_TYPE"
+      let Checksum = getChecksum (sprintf "STARTUP_FILE=%s,STARTUP_TYPE=%s" File Type)
       let result: Dto.StartupXInputDto = {
-        Type = getProperty str "STARTUP_TYPE"
-        File = getProperty str "STARTUP_FILE"
-        Checksum = getChecksum str
+        File = File
+        Type = Type
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.StartupXInputDto> = {
         data = result
@@ -168,10 +203,13 @@ module StartupXInput =
 
 module WaveInput = 
     let toDto (str: string) =
+      let File = getProperty str "WAVE_FILE"
+      let Kind = getProperty str "WAVE_KIND"
+      let Checksum = getChecksum (sprintf "WAVE_FILE=%s,WAVE_KIND=%s" File Kind)
       let result: Dto.WaveInputDto = {
-        File = getProperty str "WAVE_FILE"
-        Kind = getProperty str "WAVE_KIND"
-        Checksum = getChecksum str
+        File = File
+        Kind = Kind
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.WaveInputDto> = {
         data = result
@@ -180,10 +218,13 @@ module WaveInput =
 
 module WindInput = 
     let toDto (str: string) =
+      let File = getProperty str "WIND_FILE"
+      let Type = getProperty str "WIND_TYPE"
+      let Checksum = getChecksum (sprintf "WIND_FILE=%s,WIND_TYPE=%s" File Type)
       let result: Dto.WindInputDto = {
-        File = getProperty str "WIND_FILE"
-        Type = getProperty str "WIND_TYPE"
-        Checksum = getChecksum str
+        File = File
+        Type = Type
+        Checksum = Checksum
       }
       let dto: Dto.Dto<Dto.WindInputDto> = {
         data = result

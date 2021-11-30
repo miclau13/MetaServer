@@ -217,7 +217,7 @@ module FVCOMInputDto =
     }
     dto
 
-  /// create a domain object from a DTO
+  // create a domain object from a DTO
   let toDomain (dto: Dto<FVCOMInputDto>) :Result<Domain.FVCOMInput,string> =
     let data = dto |> fromDto
     result {

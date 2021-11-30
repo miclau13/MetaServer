@@ -60,7 +60,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             match textResult with
             | Ok r ->
                 let resultInDomain = r |> Input.parserResultToDomain
-                printfn "resultInDomain: %A" resultInDomain
                 let validInputResults = 
                     resultInDomain |> Array.filter (fun item -> 
                         match item with 
@@ -75,10 +74,11 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         | Error e -> failwith e
                     )
                     |> Array.toList
-                // Neo4j.deleteAllNodes()
-                // let result = Neo4j.createMultipleNodesIfNotExist input
-                // printfn "Result: %A " result
-                // Neo4j.relateInitNodes ()
+                Neo4j.deleteAllNodes()
+                let result = Neo4j.createMultipleNodesIfNotExist input
+                printfn "Result: %A " result
+                Neo4j.createInitNodesIfNotExist() |> ignore
+                Neo4j.relateInitNodes ()
                 Ok ()
             | Error e -> 
                 let errorMessage = sprintf "E: %A" e
@@ -133,7 +133,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
                 match argz.Contains(RelationshipPropertyValue) with
                 | true -> 
                     let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
-                    let result = Neo4j.getRelationships(r, relationshipProperty, relationshipPropertyValue)
+                    let result = Neo4j.getRelationships(r, Some relationshipProperty, Some relationshipPropertyValue)
                     printfn "%A" result
                     Ok ()
                     // sprintf "*..%s" (runArgs.GetResult(RelationshipProperty))
@@ -141,8 +141,10 @@ let runList (runArgs: ParseResults<ListArgs>) =
                     printfn "%s" "No Relationship property value provided"
                     Error ArgumentsNotSpecified
             | false ->
-                printfn "%s" "No Relationship property value provided"
-                Error ArgumentsNotSpecified
+                // let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
+                let result = Neo4j.getRelationships(r, None, None)
+                printfn "%A" result
+                Ok ()
         | None -> 
             let result = Neo4j.getAllRelationship()
             for i in result do
