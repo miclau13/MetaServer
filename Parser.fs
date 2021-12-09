@@ -24,13 +24,9 @@ let lineWithoutSpaces line =
 
   result
 
-// (sepBy (manySatisfy (fun c -> c <> '/')) (pchar '/'))
-// manyChars anyChar
-// manyChars anyChar) (pchar '/')
 let textWithoutSpaces line = 
   let result = 
-    run ((skipCharsTillString "&" false 10000) >>. sepBy (manySatisfy (fun c -> c <> '/')) (pchar '/')) line 
+    run ((skipCharsTillString "&" false 1000000) >>. sepBy (many1CharsTill anyChar (next2CharsSatisfy (fun f s -> 
+      (f = '/' && s ='\n') ) <|> eof) ) (pchar '/')) line 
     |> toResult
-    // |> toResultString
-
   result
