@@ -7,6 +7,8 @@ open FSharp.Json
 open Dto
 open Db
 open Domain
+open IOInput
+open RiverInput
 
 open System.Collections.Generic;
 
@@ -49,6 +51,7 @@ let demoHasInput1 = HasInputDTO { SID = "1" }
 let demoHasInput2 = HasInputDTO { SID = "2" }
 let demoFileLocationis1 = FileLocationIsDTO { BasicPath = "root" }
 let demoFileLocationis2 = FileLocationIsDTO { BasicPath = "src" }
+let demoFileLocationis3 = FileLocationIsDTO { BasicPath = "." }
 
 let demoGrid = Grid {
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8a"
@@ -105,13 +108,27 @@ let demoFVCOMInputFile = File {
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8y"
 }
 
+let demoRiverInputFile = File {
+    Path = Path "/input/"
+    Name = Name "RiverNamelist"
+    Format = Format "nml"
+    Checksum = Checksum "5a2ff2c3d786a668d2f4da470d2e2edef57b73e9"
+}
+
+let demoGridCoorInputFile = File {
+    Path = Path "/input/"
+    Name = Name "Ti1_grd"
+    Format = Format "dat"
+    Checksum = Checksum "c6d1b7d99be4abb63d32e4a3ee1c19ee04e8ab71"
+}
+
 // let initNodes = [demoGrid; demoFVCOMInputFile; demoGridFile; demoFVCOMInput]
 // let initGrids = [demoGrid]
 // let initGridsLabels = ["Grid"]
 // let initFiles = [demoFVCOMInputFile; demoGridFile]
 // let initFilesLabels = ["File"]
 let initFVCOMInput = [demoFVCOMInput; demoFVCOMInput1; demoFVCOMInput2; demoFVCOMInput3; demoGrid; demoGridFile]
-// let initFVCOMInputLabels = ["FVCOMInput"]
+let initInputFiles = [demoRiverInputFile; demoGridCoorInputFile]
 
 let getNodeLabel (node: Node) =
     let label =
@@ -430,6 +447,74 @@ let relateInitNodes () =
     relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
     relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
     // relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
-    printfn "%A" "relateInitNodes"
+    // printfn "%A" "relateInitNodes"
 
 let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid
+
+let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) = 
+    let inputNode = 
+        List.find (
+            function 
+            | IOInput _ -> true
+            | _ -> false
+        ) input
+    // printfn "inputNode: %A" inputNode
+    let inputDirectory = 
+        inputNode 
+        |> function 
+            | IOInput n -> 
+                let (InputDirectory d) = n.InputDirectory
+                d
+            | _ -> ""
+    let files = 
+        List.map(fun node ->
+            match node with 
+            | RiverInput n -> 
+                let (InfoFile f) = n.InfoFile
+                let name = (f.Split [|'.'|]).[0]
+                let format = (f.Split [|'.'|]).[1]
+                let fileLocation = sprintf "%s%s" inputDirectory f
+                let checksum = Input.getChecksumFromFile fileLocation
+                let result = File {
+                    Path = Path inputDirectory
+                    Name = Name name
+                    Format = Format format
+                    Checksum = Checksum (checksum)
+                }
+                Some (result)
+            | GridCoordinatesInput n -> 
+                let (InputFile f) = n.File
+                let name = (f.Split [|'.'|]).[0]
+                let format = (f.Split [|'.'|]).[1]
+                let fileLocation = sprintf "%s%s" inputDirectory f
+                let checksum = Input.getChecksumFromFile fileLocation
+                let result = File {
+                    Path = Path inputDirectory
+                    Name = Name name
+                    Format = Format format
+                    Checksum = Checksum (checksum)
+                }
+                Some (result)
+            | _ -> None
+        ) input
+    let inputFiles = files |> List.filter (Option.isSome) |> List.map (Option.get)
+    let result = createMultipleNodesIfNotExist inputFiles
+    
+    let inputs = input |> List.filter (fun item -> match item with | RiverInput _ -> true | GridCoordinatesInput _ -> true | _ -> false) 
+    List.iter2 (fun input inputFile -> 
+        relateNodes input inputFile "FILE_LOCATION_IS" (Some demoFileLocationis3)
+    ) inputs inputFiles
+    result
+
+let createInitInputFilesIfNotExist () = createMultipleNodesIfNotExist initInputFiles
+
+let relateInitInputFiles (input: list<Domain.Node>) = 
+    List.iter (fun (node: Domain.Node) -> 
+        match node with 
+        | RiverInput _ -> relateNodes node demoRiverInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
+        | GridCoordinatesInput _ -> relateNodes node demoGridCoorInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
+        | _ -> printfn "Others"
+    ) input
+
+
+    // printfn "%A" "relateInitInputFiles"

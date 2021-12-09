@@ -1,7 +1,7 @@
 module Input
 
 open System.Security.Cryptography
-
+open System
 type RawInput =
     { RawString : string }
 
@@ -29,6 +29,19 @@ let (|RegexTitle|_|) pattern input =
     let m = Regex.Match(input, pattern)
     if (m.Success) then Some input else None
 
+let getChecksumFromFile (path: string) =
+
+  if IO.File.Exists(path) then
+    if (IO.FileInfo(path)).Length <> 0L then
+      printfn "\n%s:" path
+      let content = IO.File.ReadAllBytes(path)
+      let result = content |> SHA1.Create().ComputeHash |> Array.fold (fun acc b -> acc + b.ToString("X2")) ""
+      result
+    else
+      sprintf "File %s has null length." path
+  else
+    sprintf "File %s does not exist." path
+
 let getChecksum (str: string) = 
   let bytes = 
     System.Text.Encoding.UTF8.GetBytes str
@@ -40,6 +53,7 @@ let getProperty (str: string) (property: string) =
     let regex = sprintf ".*?%s(?:\s*=\s*'*)([^',]*)(?:'*\s*)," property
     match str with
     | RegexGroup regex str ->
+          // printfn "property: %s str:%s" property str
           str
     | _ -> "Something else"
 
@@ -66,10 +80,10 @@ module FVCOMInput =
     let toDto (str: string) =
       let CaseTitle = getProperty str "CASE_TITLE"
       let TimeZone = getProperty str "TIMEZONE"
-      let DateFormat = getProperty str "DateFormat"
-      let StartDate = getProperty str "StartDate"
-      let EndDate = getProperty str "EndDate"
-      let Checksum = getChecksum (sprintf "CASE_TITLE=%s,TIMEZONE=%s,DateFormat=%s,StartDate=%s,EndDate=%s" CaseTitle TimeZone DateFormat StartDate EndDate)
+      let DateFormat = getProperty str "DATE_FORMAT"
+      let StartDate = getProperty str "START_DATE"
+      let EndDate = getProperty str "END_DATE"
+      let Checksum = getChecksum (sprintf "CASE_TITLE=%s,TIMEZONE=%s,DATE_FORMAT=%s,START_DATE=%s,END_DATE=%s" CaseTitle TimeZone DateFormat StartDate EndDate)
       let result: Dto.FVCOMInputDto = {
         CaseTitle = CaseTitle
         TimeZone = TimeZone
@@ -235,8 +249,7 @@ let parserResultToDomain (result: list<string>) =
     result 
     |> Array.ofList
     |> Array.fold(fun acc item -> 
-      // printfn "item: %s %A" item (Regex.IsMatch(item, "&NML_NETCDF\s"))
-    
+      // printfn "item: %s" item 
       match item with 
       | RegexTitle "&NML_CASE\s" str -> 
         let result = str |> FVCOMInput.toDto |> Dto.FVCOMInputDto.toDomain 
@@ -250,6 +263,7 @@ let parserResultToDomain (result: list<string>) =
         | Error e -> Array.append acc [|Error e|]
       | RegexTitle "&NML_IO\s" str -> 
         let result = str |> IOInput.toDto |> Dto.IOInputDto.toDomain 
+        // printfn "NML_IO str: %s , result: %A" str result
         match result with 
         | Ok r -> Array.append acc [|(Ok (Domain.IOInput r))|]
         | Error e -> Array.append acc [|Error e|]

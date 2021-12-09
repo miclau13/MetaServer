@@ -54,12 +54,16 @@ let runInit (runArgs: ParseResults<InitArgs>) =
         // Get the config
         let configArgs = runArgs.GetResult(Config)
         try
+
+            let newDir = IO.Directory.CreateDirectory
             let text = IO.File.ReadAllText configArgs
             let textResult = Parser.textWithoutSpaces text
             // printfn "textResult':%A" textResult
             match textResult with
             | Ok r ->
-                let resultInDomain = r |> Input.parserResultToDomain
+                let resultInDomain = 
+                    r 
+                    |> Input.parserResultToDomain
                 let validInputResults = 
                     resultInDomain |> Array.filter (fun item -> 
                         match item with 
@@ -74,9 +78,55 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         | Error e -> failwith e
                     )
                     |> Array.toList
+                // printfn "input':%A" input
+                let checkIfFileExist path =
+                    if (IO.File.Exists path) then
+                        true
+                    else false
+                let checkIfDirectoryExist path =
+                    if (IO.Directory.Exists path) then
+                        true
+                    else false
+                let createDirectoryIfNotExist path = 
+                    if (checkIfDirectoryExist path) then
+                        let info = IO.Directory.CreateDirectory path
+                        printfn "info: %A" info
+
+                let copyFile basePath path (file: Domain.File) =
+                    let currentDirectory = IO.Directory.GetCurrentDirectory()
+                    let inputDirectory = "/data/input"
+                    let fullInputDirectory = sprintf "%s%s" currentDirectory inputDirectory
+                    createDirectoryIfNotExist fullInputDirectory
+                    let (Domain.Checksum checksum) = file.Checksum
+                    let checksumDirectory1 = checksum.[0..1]
+                    let checksumDirectory2 = checksum.[2..3]
+                    let checksumDirectory = sprintf "/%s/%s/" checksumDirectory1 checksumDirectory2
+                    let targetDirectory = sprintf "%s%s" fullInputDirectory checksumDirectory
+                    let checksumFileName = checksum.[4..]
+                    createDirectoryIfNotExist targetDirectory
+                    let (Domain.Name fileName) = file.Name
+                    let (Domain.Format fileFormat) = file.Format
+                    let fileName' = sprintf "%s.%s" fileName fileFormat
+                    let sourceDirectory = sprintf "%s%s" currentDirectory "/input"
+                    if not <| checkIfFileExist (IO.Path.Combine(targetDirectory, checksumFileName)) then
+                        IO.File.Copy(IO.Path.Combine(sourceDirectory, fileName'), IO.Path.Combine(targetDirectory, checksumFileName))
+                        
+                    //TODO: suppose fixed path or base path?
                 Neo4j.deleteAllNodes()
                 let result = Neo4j.createMultipleNodesIfNotExist input
-                printfn "Result: %A " result
+                let inputFiles = Neo4j.createAndRelateInitInputFilesFromInput input
+                match inputFiles with
+                | Ok nodes -> 
+                    fst nodes
+                    |> Array.ofList
+                    |> Array.Parallel.iter (fun item -> 
+                        match item with 
+                        | Domain.File f -> copyFile "" "" f
+                        | _ ->  printfn "Others: %A " item
+                    )
+                | Error e -> failwith e
+                
+                // Neo4j.relateInitInputFiles input
                 Neo4j.createInitNodesIfNotExist() |> ignore
                 Neo4j.relateInitNodes ()
                 Ok ()
