@@ -106,10 +106,13 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     createDirectoryIfNotExist targetDirectory
                     let (Domain.Name fileName) = file.Name
                     let (Domain.Format fileFormat) = file.Format
-                    let fileName' = sprintf "%s.%s" fileName fileFormat
+                    let sourceFileName = sprintf "%s.%s" fileName fileFormat
                     let sourceDirectory = sprintf "%s%s" currentDirectory "/input"
-                    if not <| checkIfFileExist (IO.Path.Combine(targetDirectory, checksumFileName)) then
-                        IO.File.Copy(IO.Path.Combine(sourceDirectory, fileName'), IO.Path.Combine(targetDirectory, checksumFileName))
+                    let targetFileName = sprintf "%s-%s" checksumFileName fileName
+                    let sourcePath = IO.Path.Combine(sourceDirectory, sourceFileName)
+                    let targetPath = IO.Path.Combine(targetDirectory, targetFileName)
+                    if not <| checkIfFileExist targetPath then
+                        IO.File.Copy(sourcePath, targetPath)
                         
                     //TODO: suppose fixed path or base path?
                 Neo4j.deleteAllNodes()
