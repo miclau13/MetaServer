@@ -48,28 +48,41 @@ and ListArgs =
             | RelationshipProperty _ -> "Specify Relationship property."
             | RelationshipPropertyValue _ -> "Specify Relationship property value."
 
+type Data() =
+    member x.Read() =
+        // Read in a file with StreamReader.
+        use stream = new IO.StreamReader @"/Users/miclo/MetaServer.Cli/data/input/5A/2F/F2C3D786A668D2F4DA470D2E2EDEF57B73E9-RiverNamelist"
+        // Continue reading while valid lines.
+        let mutable valid = true
+        while (valid) do
+            let line = stream.ReadLine()
+            if (line = null) then
+                valid <- false
+            else
+                // Display line.
+                printfn "%A" line
+
 let runInit (runArgs: ParseResults<InitArgs>) =
     match runArgs with
     | argz when argz.Contains(Config) ->
         // Get the config
         let configArgs = runArgs.GetResult(Config)
         try
-
             let newDir = IO.Directory.CreateDirectory
             let text = IO.File.ReadAllText configArgs
             let textResult = Parser.textWithoutSpaces text
             // printfn "textResult':%A" textResult
             match textResult with
             | Ok r ->
-                let resultInDomain = 
-                    r 
-                    |> Input.parserResultToDomain
+                let resultInDomain = r |> Input.parserResultToDomain
+                // printfn "resultInDomain':%A" resultInDomain
                 let validInputResults = 
                     resultInDomain |> Array.filter (fun item -> 
                         match item with 
                         | Ok _ -> true
                         | _ -> false
                     )
+                // printfn "validInputResults':%A" validInputResults
                 let input = 
                     validInputResults 
                     |> Array.Parallel.map (fun item -> 
@@ -78,7 +91,42 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         | Error e -> failwith e
                     )
                     |> Array.toList
-                // printfn "input':%A" input
+                printfn "input':%A" input
+                
+                let compressFile originalFileName targetFileName = 
+                    let minimumFileSize = int64 1300000
+                    let originalFileStream =  (IO.FileInfo originalFileName).OpenRead() 
+                    printfn "originalFileName:%A" originalFileName
+                    if originalFileStream.Length > minimumFileSize then
+                        let tragetFileStream = (IO.FileInfo targetFileName).Create()
+
+                        printfn "targetFileName:%A" targetFileName
+                        let compressor = new IO.Compression.DeflateStream(tragetFileStream, IO.Compression.CompressionLevel.Optimal)
+                        try 
+                            originalFileStream.CopyTo(compressor)
+                            let originalSize = (IO.FileInfo originalFileName).Length
+                            let compressedSize = (IO.FileInfo targetFileName).Length
+                            printfn "originalSize:%A\ncompressedSize:%A" originalSize compressedSize
+                            tragetFileStream.Close()
+                        with 
+                            ex -> 
+                                printfn "%s" ex.Message
+                                // Error ArgumentsNotSpecified
+                    originalFileStream.Close()
+                let decompressFile originalFileName targetFileName = 
+                    printfn "originalFileName:%A" originalFileName
+                    printfn "targetFileName:%A" targetFileName
+                    if IO.File.Exists originalFileName then
+                        let compressedFileStream = IO.File.Open(originalFileName, IO.FileMode.Open);
+                        let outputFileStream = IO.File.Create(targetFileName);
+                        let decompressor = new IO.Compression.DeflateStream(compressedFileStream, IO.Compression.CompressionMode.Decompress);
+                        decompressor.CopyTo(outputFileStream);
+                        outputFileStream.Close()
+                        compressedFileStream.Close()
+                    // let originalSize = IO.FileInfo(originalFileName).Length
+                    // let compressedSize = IO.FileInfo(targetFileName).Length
+                    // printfn "originalSize:%A\ncompressedSize:%A" originalSize compressedSize
+
                 let checkIfFileExist path =
                     if (IO.File.Exists path) then
                         true
@@ -88,7 +136,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         true
                     else false
                 let createDirectoryIfNotExist path = 
-                    if (checkIfDirectoryExist path) then
+                    if (not <| checkIfDirectoryExist path) then
                         let info = IO.Directory.CreateDirectory path
                         printfn "info: %A" info
 
@@ -113,6 +161,9 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     let targetPath = IO.Path.Combine(targetDirectory, targetFileName)
                     if not <| checkIfFileExist targetPath then
                         IO.File.Copy(sourcePath, targetPath)
+                    compressFile targetPath (targetPath+".gz")
+                    decompressFile (targetPath+".gz") (targetPath+".ungz")
+
                         
                     //TODO: suppose fixed path or base path?
                 Neo4j.deleteAllNodes()
@@ -122,7 +173,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 | Ok nodes -> 
                     fst nodes
                     |> Array.ofList
-                    |> Array.Parallel.iter (fun item -> 
+                    |> Array.iter (fun item -> 
                         match item with 
                         | Domain.File f -> copyFile "" "" f
                         | _ ->  printfn "Others: %A " item
