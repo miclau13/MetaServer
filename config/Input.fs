@@ -33,7 +33,6 @@ let getChecksumFromFile (path: string) =
 
   if IO.File.Exists(path) then
     if (IO.FileInfo(path)).Length <> 0L then
-      printfn "\n%s:" path
       let content = IO.File.ReadAllBytes(path)
       let result = content |> SHA1.Create().ComputeHash |> Array.fold (fun acc b -> acc + b.ToString("X2")) ""
       result

@@ -28,6 +28,7 @@
 
     <Compile Include="Dto.fs" />
     <Compile Include="./config/Input.fs" />
+    <Compile Include="FileIO.fs" />
     <Compile Include="Grid.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Db.fs" />
