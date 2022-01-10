@@ -23,11 +23,15 @@ with
 and InitArgs =
     | [<AltCommandLine("-a")>] All
     | [<AltCommandLine("-c")>] Config of msg:string
+    | [<AltCommandLine("-bp")>] BasePath of msg:string option
+    | [<AltCommandLine("-td")>] TargetDirectory of msg:string option
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | All -> "Init all."
             | Config _ -> "Read the config."
+            | BasePath _ -> "Specifiy the base path."
+            | TargetDirectory _ -> "Specify the target directiory."
 
 and ListArgs =
     | [<AltCommandLine("-a")>] All
@@ -99,8 +103,15 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         |> Array.filter Option.isSome
                         |> Array.map Option.get
                     | Error e -> failwith e
-                printfn "commitsChecksum:%A" commitsChecksum
-                createTreeFile (".", "/data") commitsChecksum
+
+                // Get the base path 
+                let basePathArgs = runArgs.GetResult(BasePath, Some ".")
+                let basePath = defaultArg basePathArgs "."
+                // Get the target directory if any
+                let targetDirectoryArgs = runArgs.GetResult(TargetDirectory, Some "/data")
+                let targetDirectory = defaultArg targetDirectoryArgs "/data"
+
+                createTreeFile (basePath, targetDirectory) commitsChecksum
                 // Neo4j.relateInitInputFiles input
                 Neo4j.createInitNodesIfNotExist() |> ignore
                 Neo4j.relateInitNodes ()
