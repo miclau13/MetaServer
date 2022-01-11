@@ -27,6 +27,7 @@ and InitArgs =
     | [<AltCommandLine("-isd")>] InputSourceDirectory of msg:string option
     | [<AltCommandLine("-osd")>] OutputSourceDirectory of msg:string option
     | [<AltCommandLine("-od")>] OutputDirectory of msg:string option
+    | [<AltCommandLine("-ca")>] CleanAll
     interface IArgParserTemplate with
         member this.Usage =
             match this with
@@ -35,7 +36,8 @@ and InitArgs =
             | BasePath _ -> "Specifiy the base path."
             | InputSourceDirectory _ -> "Specify the input source directiory."
             | OutputSourceDirectory _ -> "Specify the output source directiory."
-            | OutputDirectory _ -> "Specify the output directory"
+            | OutputDirectory _ -> "Specify the output directory."
+            | CleanAll _ -> "Clean all previous nodes."
 
 and ListArgs =
     | [<AltCommandLine("-a")>] All
@@ -104,7 +106,11 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     )
                     |> Array.toList
                 // printfn "input:%A" input
-                Neo4j.deleteAllNodes()
+
+                // Delete All Previous Nodes if specified
+                let shouldCleanAll = argz.Contains(CleanAll)
+                if shouldCleanAll then
+                    Neo4j.deleteAllNodes()
                 let result = Neo4j.createMultipleNodesIfNotExist input
                 // printfn "result:%A" result
                 let inputFiles = Neo4j.createAndRelateInitInputFilesFromInput input
@@ -138,7 +144,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let srcPath = getFullPathWithBasePath basePath outputSourceDirectory
                 // printfn "dstPath:%A" dstPath
                 // printfn "srcPath:%A" srcPath
-                directoryCopy srcPath dstPath checksumFileName false
+                directoryCopy srcPath dstPath checksum false
                 // Input.inputFileResult f inputDirectory
                 let outputFiles = getAllFilesInDirectory dstPath
                 // printfn "outputFiles:%A" outputFiles

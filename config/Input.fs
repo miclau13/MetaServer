@@ -23,9 +23,9 @@ type Input =
 
 // create an active pattern
 open System.Text.RegularExpressions
-let (|RegexGroup|_|) pattern input =
+let (|RegexGroup|_|) pattern (groupIndex: int) input  =
     let m = Regex.Match(input, pattern)
-    if (m.Success) then Some m.Groups.[1].Value else None
+    if (m.Success) then Some m.Groups.[groupIndex].Value else None
 let (|RegexTitle|_|) pattern input =
     let m = Regex.Match(input, pattern)
     if (m.Success) then Some input else None
@@ -55,8 +55,9 @@ let inputFileResult (file: string) (inputDirectory: string) =
     // If input is in nc format, check if it has checksum in its file name
     // If yes then use the checksum directly, otherwise generate checksum 
     match name with 
-    | n when name.StartsWith("sha-") -> 
-      n.Substring 4
+    | RegexGroup "(\w{40}-)(.*)" 0 name  -> 
+      printfn "inputFileResult name %s" name
+      name
     | _ -> getChecksumFromFile fileLocation
   let result = File {
       Path = Path inputDirectory
@@ -76,7 +77,7 @@ let getChecksum (str: string) =
 let getProperty (str: string) (property: string) =
     let regex = sprintf ".*?%s(?:\s*=\s*'*)([^',]*)(?:'*\s*)," property
     match str with
-    | RegexGroup regex str ->
+    | RegexGroup regex 1 str ->
           // printfn "property: %s str:%s" property str
           str
     | _ -> "Something else"
