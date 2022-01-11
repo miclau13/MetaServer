@@ -81,6 +81,28 @@ let getProperty (str: string) (property: string) =
           str
     | _ -> "Something else"
 
+// For output files 
+let initOutputFileNodes (files: IO.FileInfo []) (dir: string) = 
+  let fileNodes = 
+    Array.Parallel.map (fun (file: IO.FileInfo) -> 
+      let fileName = file.Name
+      let name = (fileName.Split [|'.'|]).[0]
+      let format = (fileName.Split [|'.'|]).[1]
+      // let fileLocation = sprintf "%s%s" dir fileName
+      let checksum = 
+        // Dummy checksum, use file name as the checksum
+        getChecksum fileName
+      let result = File {
+          Path = Path dir
+          Name = Name name
+          Format = Format format
+          Checksum = Checksum (checksum)
+      }
+      // printfn "initOutputFileNodes result: %A" result
+      result
+    ) files
+    |> List.ofArray
+  fileNodes
 module RawInput = 
     let toDomain (str: string) =
       let result = { RawString = str }

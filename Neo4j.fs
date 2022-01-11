@@ -456,6 +456,12 @@ let relateInitNodes () =
 
 let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid
 
+let relateOutputFilesToSimulation (files: list<Domain.Node>) (checksum: string) =
+    let simulationNode = Simulation { Checksum = Checksum checksum }
+    List.iter (fun inputFile -> 
+        relateNodes inputFile simulationNode "SIMULATION_IS" None
+    ) files
+
 let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) = 
     let inputNode = 
         List.find (
@@ -493,11 +499,11 @@ let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) =
     // TODO: seperate as a function
     let nodesChecksum = Domain.getChecksumListArrayFromNodes inputFiles
     let (checksum, _) = FileIO.getChecksumInfoFromChecksumArray nodesChecksum
-    let commitChecksum = FileIO.getChecksumFileName checksum "tree"
-    let simulationNode = Simulation { Checksum = Checksum commitChecksum }
+    // let commitChecksum = FileIO.getChecksumFileName checksum "tree"
+    let simulationNode = Simulation { Checksum = Checksum checksum }
     createNodeIfNotExist simulationNode
     List.iter (fun inputFile -> 
-        relateNodes inputFile simulationNode  "SIMULATION_IS" None
+        relateNodes inputFile simulationNode "SIMULATION_IS" None
     ) input
 
     // Relate the nodes with file locations

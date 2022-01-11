@@ -24,7 +24,8 @@ and InitArgs =
     | [<AltCommandLine("-a")>] All
     | [<AltCommandLine("-c")>] Config of msg:string
     | [<AltCommandLine("-bp")>] BasePath of msg:string option
-    | [<AltCommandLine("-sd")>] SourceDirectory of msg:string option
+    | [<AltCommandLine("-isd")>] InputSourceDirectory of msg:string option
+    | [<AltCommandLine("-osd")>] OutputSourceDirectory of msg:string option
     | [<AltCommandLine("-od")>] OutputDirectory of msg:string option
     interface IArgParserTemplate with
         member this.Usage =
@@ -32,7 +33,8 @@ and InitArgs =
             | All -> "Init all."
             | Config _ -> "Read the config."
             | BasePath _ -> "Specifiy the base path."
-            | SourceDirectory _ -> "Specify the source directiory."
+            | InputSourceDirectory _ -> "Specify the input source directiory."
+            | OutputSourceDirectory _ -> "Specify the output source directiory."
             | OutputDirectory _ -> "Specify the output directory"
 
 and ListArgs =
@@ -61,6 +63,20 @@ let runInit (runArgs: ParseResults<InitArgs>) =
         // Get the config
         let configArgs = runArgs.GetResult(Config)
         try
+            // Get the base path 
+            let basePathArgs = runArgs.GetResult(BasePath, Some ".")
+            let basePath = defaultArg basePathArgs "."
+            // Get the input source directory if any
+            let inputSourceDirectoryArgs = runArgs.GetResult(InputSourceDirectory, Some "/input")
+            let inputSourceDirectory = defaultArg inputSourceDirectoryArgs "/input"
+            // Get the output source directory if any
+            let outputSourceDirectoryArgs = runArgs.GetResult(OutputSourceDirectory, Some "/output")
+            let outputSourceDirectory = defaultArg outputSourceDirectoryArgs "/output"
+            // Get the ouput directory if any
+            let outputDirectoryArgs = runArgs.GetResult(OutputDirectory, Some "/data")
+            let outputDirectory = defaultArg outputDirectoryArgs "/data"
+
+            // Start dealing with input
             // Get the content from the config file
             let configContent = IO.File.ReadAllText configArgs
             // Run the parser on the config file
@@ -93,20 +109,11 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // printfn "result:%A" result
                 let inputFiles = Neo4j.createAndRelateInitInputFilesFromInput input
                 // printfn "inputFiles:%A" inputFiles
-                // Get the base path 
-                let basePathArgs = runArgs.GetResult(BasePath, Some ".")
-                let basePath = defaultArg basePathArgs "."
-                // Get the source directory if any
-                let sourceDirectoryArgs = runArgs.GetResult(SourceDirectory, Some "/data")
-                let sourceDirectory = defaultArg sourceDirectoryArgs "/data"
-                // Get the ouput directory if any
-                let outputDirectoryArgs = runArgs.GetResult(OutputDirectory, Some "/input")
-                let outputDirectory = defaultArg outputDirectoryArgs "/input"
                 // Side effect: copy input files
                 match inputFiles with
                 | Ok nodes -> 
                     fst nodes
-                    |> copyInputFiles (basePath, outputDirectory, sourceDirectory) 
+                    |> copyInputFiles (basePath, inputSourceDirectory, (sprintf "%s%s" outputDirectory "/input")) 
                 | Error e -> failwith e
 
                 let commitsChecksum = 
@@ -116,16 +123,38 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         |> Domain.getChecksumListArrayFromNodes
                     | Error e -> failwith e
 
-                createTreeFile (basePath, sourceDirectory) commitsChecksum
-
+                createTreeFile (basePath, outputDirectory) commitsChecksum
+                // End of dealing with input
                 // Neo4j.relateInitInputFiles input
                 // Neo4j.createInitNodesIfNotExist() |> ignore
                 // Neo4j.relateInitNodes ()
+
+                // Start dealing with output
+                let (checksum, _) = FileIO.getChecksumInfoFromChecksumArray commitsChecksum
+                let (checksumDirectory, _, _, checksumFileName) = getPathInfoFromChecksum checksum
+                let targetDirectoryWithBasePath = getFullPathWithBasePath basePath outputDirectory
+                let targetWithBasePath = sprintf "%s/%s" targetDirectoryWithBasePath "output"
+                let dstPath = getFullPathWithBasePath targetWithBasePath checksumDirectory
+                let srcPath = getFullPathWithBasePath basePath outputSourceDirectory
+                // printfn "dstPath:%A" dstPath
+                // printfn "srcPath:%A" srcPath
+                directoryCopy srcPath dstPath checksumFileName false
+                // Input.inputFileResult f inputDirectory
+                let outputFiles = getAllFilesInDirectory dstPath
+                // printfn "outputFiles:%A" outputFiles
+                let outputFileNodes = Input.initOutputFileNodes outputFiles dstPath
+                // printfn "outputFileNodes:%A" outputFileNodes
+                // let output = 
+                let result = Neo4j.createMultipleNodesIfNotExist outputFileNodes
+                // printfn "result:%A" result
+                Neo4j.relateOutputFilesToSimulation outputFileNodes checksum
+                // End of dealing with output
+                
                 Ok ()
             | Error e -> 
                 let errorMessage = sprintf "E: %A" e
                 printfn "E: %A" errorMessage
-                Error ArgumentsNotSpecified
+                failwith "Input parsing failed"
         with 
             ex -> 
                 printfn "%s" ex.Message

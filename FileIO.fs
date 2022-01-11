@@ -4,6 +4,37 @@ open System
 open System.IO
 open Domain
 
+let getAllFilesInDirectory srcPath =
+    if not <| Directory.Exists(srcPath) then
+        let msg = System.String.Format("Source directory does not exist or could not be found: {0}", srcPath)
+        raise (DirectoryNotFoundException(msg))
+
+    let srcDir = new DirectoryInfo(srcPath)
+    srcDir.GetFiles()
+    
+
+let rec directoryCopy srcPath dstPath prefixForFileName copySubDirs  =
+
+    if not <| Directory.Exists(srcPath) then
+        let msg = System.String.Format("Source directory does not exist or could not be found: {0}", srcPath)
+        raise (DirectoryNotFoundException(msg))
+
+    if not <| Directory.Exists(dstPath) then
+        Directory.CreateDirectory(dstPath) |> ignore
+
+    let srcDir = new DirectoryInfo(srcPath)
+
+    for file in srcDir.GetFiles() do
+        // let (fName, _) = Input.getFileNameAndFormat (file.Name)
+        let fileNameWithPrefix = sprintf "%s-%s" prefixForFileName file.Name
+        let temppath = Path.Combine(dstPath, fileNameWithPrefix)
+        file.CopyTo(temppath, true) |> ignore
+
+    if copySubDirs then
+        for subdir in srcDir.GetDirectories() do
+            let dstSubDir = Path.Combine(dstPath, subdir.Name)
+            directoryCopy subdir.FullName dstSubDir prefixForFileName copySubDirs
+
 let getChecksumInfoFromChecksumArray (checksums: string []) = 
     let checksumStr = 
         checksums 
@@ -106,12 +137,12 @@ let copyFile (sourceBasePath, sourceDirectory) (targetBasePath, targetDirectory)
     // decompressFile (targetPath+".gz") (targetPath+".ungz")
     // sprintf "%s-%s" checksum fileName
 
-let copyInputFiles (basePath: string, outputDirectory: string, sourceDirectory: string) (inputFiles: list<Domain.Node>)  = 
+let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: string) (inputFiles: list<Domain.Node>)  = 
     inputFiles
     |> Array.ofList
     |> Array.Parallel.iter (fun item -> 
         match item with 
-        | Domain.File f -> copyFile (basePath, outputDirectory) (basePath, sourceDirectory) f
+        | Domain.File f -> copyFile (basePath, sourceDirectory) (basePath, outputDirectory) f
         | _ ->  printfn "Item is not copied because it is not defined in the domain: %A" item
     )
     // |> ignore
