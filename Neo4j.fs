@@ -135,6 +135,7 @@ let getNodeLabel (node: Node) =
         match node with
         | File _ -> nameof File
         | Grid _ -> nameof Grid
+        | Simulation _ -> nameof Simulation
         | AirPressureInput _ -> nameof AirPressureInput
         | FVCOMInput _ -> nameof FVCOMInput
         | GridCoordinatesInput _ -> nameof GridCoordinatesInput
@@ -196,6 +197,8 @@ let getRelationshipAttributes (relationship: RelationshipDto) =
     match relationship with
         | HasInputDTO v -> sprintf "{ SID: '%s' }" v.SID
         | FileLocationIsDTO v -> sprintf "{ BasicPath: '%s' }" v.BasicPath
+        | SimulationIsDTO v -> sprintf "{ Checksum: '%s' }" v.Checksum
+
 
 let getRelationships (relationship: string, relationshipProperty: string option, relationshipPropertyValue: string option) =
     // let queryMatchTo = sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship relationshipProperty relationshipPropertyValue
@@ -286,6 +289,7 @@ let getNodesByLabel (label: string) =
 // 8/11/2021
 let getClientWithNodeInputParameter (client: Cypher.ICypherFluentQuery) (node: Node) = 
     match node with 
+        | Simulation simulation -> client.WithParam("node", (SimulationDto.fromDomain simulation))
         | File file -> client.WithParam("node", (FileDto.fromDomain file))
         | Grid grid -> client.WithParam("node", (GridDto.fromDomain grid))
         | AirPressureInput input -> client.WithParam("node", (AirPressureInputDto.fromDomain input))
@@ -304,6 +308,7 @@ let getClientWithNodeInputParameter (client: Cypher.ICypherFluentQuery) (node: N
 
 let getNodeAttributes (node: Node) = 
     match node with
+        | Simulation simulation -> { Label = "Simulation"; Key = "Checksum"; KeyValue = simulation.Checksum |> Checksum.value }
         | File file -> { Label = "File"; Key = "Checksum"; KeyValue = file.Checksum |> Checksum.value }
         | Grid grid -> { Label = "Grid"; Key = "Checksum"; KeyValue = grid.Checksum |> Checksum.value }
         | AirPressureInput input -> { Label = "AirPressureInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
@@ -466,55 +471,52 @@ let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) =
                 let (InputDirectory d) = n.InputDirectory
                 d
             | _ -> ""
+    // printfn "inputDirectory: %A" inputDirectory
     let files = 
         List.map(fun node ->
             match node with 
             | RiverInput n -> 
                 let (InfoFile f) = n.InfoFile
-                let name = (f.Split [|'.'|]).[0]
-                let format = (f.Split [|'.'|]).[1]
-                let fileLocation = sprintf "%s%s" inputDirectory f
-                let checksum = Input.getChecksumFromFile fileLocation
-                let result = File {
-                    Path = Path inputDirectory
-                    Name = Name name
-                    Format = Format format
-                    Checksum = Checksum (checksum)
-                }
-                Some (result)
+                Input.inputFileResult f inputDirectory
             | GridCoordinatesInput n -> 
                 let (InputFile f) = n.File
-                let name = (f.Split [|'.'|]).[0]
-                let format = (f.Split [|'.'|]).[1]
-                let fileLocation = sprintf "%s%s" inputDirectory f
-                let checksum = Input.getChecksumFromFile fileLocation
-                let result = File {
-                    Path = Path inputDirectory
-                    Name = Name name
-                    Format = Format format
-                    Checksum = Checksum (checksum)
-                }
-                Some (result)
+                Input.inputFileResult f inputDirectory
+            | HeatingInput n -> 
+                let (InputFile f) = n.File
+                Input.inputFileResult f inputDirectory
             | _ -> None
         ) input
     let inputFiles = files |> List.filter (Option.isSome) |> List.map (Option.get)
     let result = createMultipleNodesIfNotExist inputFiles
-    
-    let inputs = input |> List.filter (fun item -> match item with | RiverInput _ -> true | GridCoordinatesInput _ -> true | _ -> false) 
+
+    // Sha checksum the whole input list and create the relationships and nodes in Neo4j
+    // TODO: seperate as a function
+    let nodesChecksum = Domain.getChecksumListArrayFromNodes inputFiles
+    let (checksum, _) = FileIO.getChecksumInfoFromChecksumArray nodesChecksum
+    let commitChecksum = FileIO.getChecksumFileName checksum "tree"
+    let simulationNode = Simulation { Checksum = Checksum commitChecksum }
+    createNodeIfNotExist simulationNode
+    List.iter (fun inputFile -> 
+        relateNodes inputFile simulationNode  "SIMULATION_IS" None
+    ) input
+
+    // Relate the nodes with file locations
+    // TODO: seperate as a function
+    let inputs = input |> List.filter (fun item -> match item with | RiverInput _ | GridCoordinatesInput _ | HeatingInput _ -> true | _ -> false) 
     List.iter2 (fun input inputFile -> 
-        relateNodes input inputFile "FILE_LOCATION_IS" (Some demoFileLocationis3)
+        relateNodes input inputFile "FILE_LOCATION_IS" None
     ) inputs inputFiles
     result
 
 let createInitInputFilesIfNotExist () = createMultipleNodesIfNotExist initInputFiles
 
-let relateInitInputFiles (input: list<Domain.Node>) = 
-    List.iter (fun (node: Domain.Node) -> 
-        match node with 
-        | RiverInput _ -> relateNodes node demoRiverInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
-        | GridCoordinatesInput _ -> relateNodes node demoGridCoorInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
-        | _ -> printfn "Others"
-    ) input
+// let relateInitInputFiles (input: list<Domain.Node>) = 
+//     List.iter (fun (node: Domain.Node) -> 
+//         match node with 
+//         | RiverInput _ -> relateNodes node demoRiverInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
+//         | GridCoordinatesInput _ -> relateNodes node demoGridCoorInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
+//         | _ -> printfn "Others"
+//     ) input
 
 
     // printfn "%A" "relateInitInputFiles"

@@ -24,14 +24,16 @@ and InitArgs =
     | [<AltCommandLine("-a")>] All
     | [<AltCommandLine("-c")>] Config of msg:string
     | [<AltCommandLine("-bp")>] BasePath of msg:string option
-    | [<AltCommandLine("-td")>] TargetDirectory of msg:string option
+    | [<AltCommandLine("-sd")>] SourceDirectory of msg:string option
+    | [<AltCommandLine("-od")>] OutputDirectory of msg:string option
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | All -> "Init all."
             | Config _ -> "Read the config."
             | BasePath _ -> "Specifiy the base path."
-            | TargetDirectory _ -> "Specify the target directiory."
+            | SourceDirectory _ -> "Specify the source directiory."
+            | OutputDirectory _ -> "Specify the output directory"
 
 and ListArgs =
     | [<AltCommandLine("-a")>] All
@@ -67,7 +69,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             match configContentResult with
             | Ok r ->
                 let resultInDomain = r |> Input.parserResultToDomain
-
+                // printfn "resultInDomain:%A" resultInDomain
                 // Filter out the items that haven't defined in the domain
                 let validInputResults = 
                     resultInDomain |> Array.filter (fun item -> 
@@ -75,7 +77,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         | Ok _ -> true
                         | _ -> false
                     )
-
+                // printfn "validInputResults:%A" validInputResults
                // Unwrap the value from the result type
                 let input = 
                     validInputResults 
@@ -85,36 +87,40 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         | Error e -> failwith e
                     )
                     |> Array.toList
-
-                    //TODO: suppose fixed path or base path?
+                // printfn "input:%A" input
                 Neo4j.deleteAllNodes()
                 let result = Neo4j.createMultipleNodesIfNotExist input
+                // printfn "result:%A" result
                 let inputFiles = Neo4j.createAndRelateInitInputFilesFromInput input
+                // printfn "inputFiles:%A" inputFiles
+                // Get the base path 
+                let basePathArgs = runArgs.GetResult(BasePath, Some ".")
+                let basePath = defaultArg basePathArgs "."
+                // Get the source directory if any
+                let sourceDirectoryArgs = runArgs.GetResult(SourceDirectory, Some "/data")
+                let sourceDirectory = defaultArg sourceDirectoryArgs "/data"
+                // Get the ouput directory if any
+                let outputDirectoryArgs = runArgs.GetResult(OutputDirectory, Some "/input")
+                let outputDirectory = defaultArg outputDirectoryArgs "/input"
+                // Side effect: copy input files
+                match inputFiles with
+                | Ok nodes -> 
+                    fst nodes
+                    |> copyInputFiles (basePath, outputDirectory, sourceDirectory) 
+                | Error e -> failwith e
+
                 let commitsChecksum = 
                     match inputFiles with
                     | Ok nodes -> 
                         fst nodes
-                        |> Array.ofList
-                        |> Array.Parallel.map (fun item -> 
-                            match item with 
-                            | Domain.File f -> Some (copyFile (".", "/input") (".","/data") f)
-                            | _ ->  None
-                        )
-                        |> Array.filter Option.isSome
-                        |> Array.map Option.get
+                        |> Domain.getChecksumListArrayFromNodes
                     | Error e -> failwith e
 
-                // Get the base path 
-                let basePathArgs = runArgs.GetResult(BasePath, Some ".")
-                let basePath = defaultArg basePathArgs "."
-                // Get the target directory if any
-                let targetDirectoryArgs = runArgs.GetResult(TargetDirectory, Some "/data")
-                let targetDirectory = defaultArg targetDirectoryArgs "/data"
+                createTreeFile (basePath, sourceDirectory) commitsChecksum
 
-                createTreeFile (basePath, targetDirectory) commitsChecksum
                 // Neo4j.relateInitInputFiles input
-                Neo4j.createInitNodesIfNotExist() |> ignore
-                Neo4j.relateInitNodes ()
+                // Neo4j.createInitNodesIfNotExist() |> ignore
+                // Neo4j.relateInitNodes ()
                 Ok ()
             | Error e -> 
                 let errorMessage = sprintf "E: %A" e

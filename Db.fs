@@ -6,6 +6,11 @@ open Neo4j.Driver
 open Settings
 
 [<CLIMutable>]
+
+type Simulation = {
+    Checksum: string
+}
+
 type File = {
     Path: string
     Name: string

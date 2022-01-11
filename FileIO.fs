@@ -4,6 +4,17 @@ open System
 open System.IO
 open Domain
 
+let getChecksumInfoFromChecksumArray (checksums: string []) = 
+    let checksumStr = 
+        checksums 
+        |> Array.reduce (fun acc item -> 
+            sprintf "%s\n%s" acc item
+        ) 
+    let checksum = 
+        checksumStr
+        |> Input.getChecksum
+    (checksum, checksumStr)
+
 let getChecksumFileName (checksum: string) (fileName: string) = 
     sprintf "%s-%s" checksum fileName
 
@@ -93,23 +104,28 @@ let copyFile (sourceBasePath, sourceDirectory) (targetBasePath, targetDirectory)
         printfn "targetPath (%s) already exists."  targetPath
     // compressFile targetPath (targetPath+".gz")
     // decompressFile (targetPath+".gz") (targetPath+".ungz")
-    sprintf "%s-%s" checksum fileName
+    // sprintf "%s-%s" checksum fileName
+
+let copyInputFiles (basePath: string, outputDirectory: string, sourceDirectory: string) (inputFiles: list<Domain.Node>)  = 
+    inputFiles
+    |> Array.ofList
+    |> Array.Parallel.iter (fun item -> 
+        match item with 
+        | Domain.File f -> copyFile (basePath, outputDirectory) (basePath, sourceDirectory) f
+        | _ ->  printfn "Item is not copied because it is not defined in the domain: %A" item
+    )
+    // |> ignore
 
 let createTreeFile (basePath, targetDirectory) (commitChecksums: string []) = 
     let currentTimeStamp = DateTime.UtcNow.ToString()
     let currentUser = Environment.UserName
 
-    let checksumStr = 
-        commitChecksums 
-        |> Array.reduce (fun acc item -> 
-            sprintf "%s\n%s" acc item
-        ) 
-    let checksum = 
-        checksumStr
-        |> Input.getChecksum
+    let (checksum, checksumStr) = getChecksumInfoFromChecksumArray commitChecksums
     
+    // Create the directory for the tree
     let targetDirectoryWithBasePath = getFullPathWithBasePath basePath targetDirectory
     createDirectoryIfNotExist targetDirectoryWithBasePath
+    
     let (checksumDirectory, _, _, checksumFileName) = getPathInfoFromChecksum checksum
     let targetFileName = getChecksumFileName checksumFileName "tree"
     let targetWithBasePath = getFullPathWithBasePath targetDirectoryWithBasePath checksumDirectory

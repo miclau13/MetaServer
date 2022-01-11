@@ -88,6 +88,9 @@ module Format =
         Ok (Format str)
   let value format = match format with | Format f -> f
 
+type Simulation = {
+  Checksum: Checksum
+}
 type Grid = {
   Checksum: Checksum
   NodeNumber: NodeNumber
@@ -178,6 +181,7 @@ type WindInput = {
 }
 
 type Node = 
+  | Simulation of Simulation
   | Grid of Grid
   | File of File
   | AirPressureInput of AirPressureInput
@@ -193,3 +197,16 @@ type Node =
   | WaveInput of WaveInput
   | WindInput of WindInput
 
+let getChecksumListArrayFromNodes (nodes: list<Node>)= 
+  nodes
+  |> Array.ofList
+  |> Array.Parallel.map (fun item -> 
+      match item with 
+      | File f -> 
+          let (Checksum checksum) = f.Checksum
+          let (Name fileName) = f.Name
+          Some (sprintf "%s-%s" checksum fileName)
+      | _ ->  None
+  )
+  |> Array.filter Option.isSome
+  |> Array.map Option.get

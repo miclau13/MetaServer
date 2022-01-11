@@ -2,6 +2,7 @@ module Input
 
 open System.Security.Cryptography
 open System
+open Domain
 type RawInput =
     { RawString : string }
 
@@ -29,6 +30,11 @@ let (|RegexTitle|_|) pattern input =
     let m = Regex.Match(input, pattern)
     if (m.Success) then Some input else None
 
+let getFileNameAndFormat (f: string) = 
+  let name = (f.Split [|'.'|]).[0]
+  let format = (f.Split [|'.'|]).[1]
+  (name, format)
+
 let getChecksumFromFile (path: string) =
 
   if IO.File.Exists(path) then
@@ -40,6 +46,25 @@ let getChecksumFromFile (path: string) =
       sprintf "File %s has null length." path
   else
     sprintf "File %s does not exist." path
+
+let inputFileResult (file: string) (inputDirectory: string) = 
+  let name = (file.Split [|'.'|]).[0]
+  let format = (file.Split [|'.'|]).[1]
+  let fileLocation = sprintf "%s%s" inputDirectory file
+  let checksum = 
+    // If input is in nc format, check if it has checksum in its file name
+    // If yes then use the checksum directly, otherwise generate checksum 
+    match name with 
+    | n when name.StartsWith("sha-") -> 
+      n.Substring 4
+    | _ -> getChecksumFromFile fileLocation
+  let result = File {
+      Path = Path inputDirectory
+      Name = Name name
+      Format = Format format
+      Checksum = Checksum (checksum)
+  }
+  Some (result)
 
 let getChecksum (str: string) = 
   let bytes = 

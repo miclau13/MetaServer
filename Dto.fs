@@ -14,6 +14,9 @@ type Dto<'T> = {
 }
 
 // Input Dto from config
+type SimulationDto = {
+  Checksum: string
+}
 type AirPressureInputDto = {
   Checksum: string
   File: string
@@ -107,9 +110,13 @@ type HasInputDTO = {
 type FileLocationIsDTO = {
   BasicPath: string
 }
+type SimulationIsDTO = {
+  Checksum: string
+}
 type RelationshipDto = 
   | HasInputDTO of HasInputDTO
   | FileLocationIsDTO of FileLocationIsDTO
+  | SimulationIsDTO of SimulationIsDTO
 
 /// Define a type to represent possible errors
 type DtoError =
@@ -119,6 +126,7 @@ type DtoError =
 type NodeOutput = {
   Checksum: string
   Labels: string []
+  Simulation: Result<Simulation, DtoError> option
   Grid: Result<Grid, DtoError> option
   File: Result<File, DtoError> option
   AirPressureInput: Result<AirPressureInput, DtoError> option
@@ -147,6 +155,48 @@ let toDto (data: 'T) =
 let fromDto (dto: Dto<'T>) = 
   dto.data
 
+module SimulationDto =
+  /// create a DTO from a domain object
+  let fromDomain (input: Domain.Simulation) :SimulationDto =
+    let checksum = input.Checksum |> Checksum.value
+    let dto: SimulationDto = {
+      Checksum = checksum
+    }
+    dto
+
+  /// create a domain object from a DTO
+  let toDomain (dto: Dto<SimulationDto>) :Result<Domain.Simulation,string> =
+    let data = dto |> fromDto
+    result {
+      // get each (validated) simple type from the DTO as a success or failure
+      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      // combine the components to create the domain object
+      return {
+        Checksum = checksum
+      }
+    }
+
+  // Serialize the Simulation into a JSON string
+  let jsonFromDomain (input: Domain.Simulation) =
+      input
+      |> fromDomain
+      |> Json.serialize
+
+  /// Deserialize a JSON string into a Simulation
+  let jsonToDomain jsonString :Result<Domain.Simulation, DtoError> =
+    result {
+      let! deserializedValue =
+          jsonString
+          |> Json.deserialize<Dto<SimulationDto>>
+          |> Result.mapError DeserializationException
+
+      let! domainValue =
+          deserializedValue
+          |> toDomain
+          |> Result.mapError ValidationError
+
+      return domainValue
+  }
 
 module AirPressureInputDto =
   /// create a DTO from a domain object
@@ -898,6 +948,12 @@ module NodeDto =
     let result = 
       {
           Labels = labelArr
+          Simulation = 
+            if Array.contains "Simulation" labelArr then
+              jsonString 
+              |> SimulationDto.jsonToDomain
+              |> Some
+            else None
           AirPressureInput = 
             if Array.contains "AirPressureInput" labelArr then
               jsonString 
@@ -986,6 +1042,10 @@ module NodeDto =
       }
     let checksum = 
         match result with 
+        | { Simulation = Some r } -> 
+          match r with 
+          | Ok value -> match value.Checksum with | Checksum v -> v
+          | Error e -> e.ToString()
         | { StartupInput = Some r } -> 
           match r with 
           | Ok value -> match value.Checksum with | Checksum v -> v

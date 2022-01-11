@@ -20,3 +20,6 @@ release.sh
 *.grd
 output/
 *.nc
+
+data/
+input/

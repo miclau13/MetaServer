@@ -120,7 +120,7 @@
  HEATING_ON      = F,
  HEATING_TYPE    = 'flux'                                                                ,
  HEATING_KIND    = 'variable'                        ,
- HEATING_FILE    = 'Titania_wnd_all.nc'                                                              ,
+ HEATING_FILE    = 'Titania_nest_all.nc'                                                              ,
  HEATING_LONGWAVE_LENGTHSCALE    =   1.400000    ,
  HEATING_LONGWAVE_PERCTAGE       =  0.7800000    ,
  HEATING_SHORTWAVE_LENGTHSCALE   =   6.300000    ,
