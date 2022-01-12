@@ -158,6 +158,8 @@ let createTreeFile (basePath, targetDirectory) (commitChecksums: string []) =
     let currentUser = Environment.UserName
 
     let (checksum, checksumStr) = getChecksumInfoFromChecksumArray commitChecksums
+    // printfn "createTreeFile commitChecksums: %A" commitChecksums
+    // printfn "createTreeFile checksumStr: %s" checksumStr
     
     // Create the directory for the tree
     let targetDirectoryWithBasePath = getFullPathWithBasePath basePath targetDirectory
@@ -188,7 +190,7 @@ let createTreeFile (basePath, targetDirectory) (commitChecksums: string []) =
 // The logic is filename with sha1-checksum meaning existed
 let isOutputFileExisted (fileName: string) =
     match fileName with 
-    | Input.RegexGroup "(\w{40}-)(.*)" 0 fileName  -> 
+    | Util.RegexGroup "(\w{40}-)(.*)" 0 fileName  -> 
         printfn "Output file already existed with name: %s" fileName 
         true
     | _ -> false

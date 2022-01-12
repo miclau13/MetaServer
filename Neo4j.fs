@@ -47,8 +47,8 @@ type River = {
 
 let clientWithCypher = Db.getDbClient ()
 
-let demoHasInput1 = HasInputDTO { SID = "1" }
-let demoHasInput2 = HasInputDTO { SID = "2" }
+let demoHasInput1 = HasInputDTO { Type = "1" }
+let demoHasInput2 = HasInputDTO { Type = "2" }
 let demoFileLocationis1 = FileLocationIsDTO { BasicPath = "root" }
 let demoFileLocationis2 = FileLocationIsDTO { BasicPath = "src" }
 let demoFileLocationis3 = FileLocationIsDTO { BasicPath = "." }
@@ -63,7 +63,7 @@ let demoGridFile = File {
     Name = Name "grid1"
     Format = Format "grd"
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8z"
-    Type = FileType "Grid"
+    // Type = FileType "Grid"
 }
 
 let demoFVCOMInput = FVCOMInput {
@@ -107,7 +107,7 @@ let demoFVCOMInputFile = File {
     Name = Name "run"
     Format = Format "nml"
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8y"
-    Type = FileType "DEMO"
+    // Type = FileType "DEMO"
 }
 
 let demoRiverInputFile = File {
@@ -115,7 +115,7 @@ let demoRiverInputFile = File {
     Name = Name "RiverNamelist"
     Format = Format "nml"
     Checksum = Checksum "5a2ff2c3d786a668d2f4da470d2e2edef57b73e9"
-    Type = FileType "DEMO"
+    // Type = FileType "DEMO"
 }
 
 let demoGridCoorInputFile = File {
@@ -123,7 +123,7 @@ let demoGridCoorInputFile = File {
     Name = Name "Ti1_grd"
     Format = Format "dat"
     Checksum = Checksum "c6d1b7d99be4abb63d32e4a3ee1c19ee04e8ab71"
-    Type = FileType "DEMO"
+    // Type = FileType "DEMO"
 }
 
 // let initNodes = [demoGrid; demoFVCOMInputFile; demoGridFile; demoFVCOMInput]
@@ -199,9 +199,9 @@ let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cyph
 // 22/11/2021
 let getRelationshipAttributes (relationship: RelationshipDto) = 
     match relationship with
-        | HasInputDTO v -> sprintf "{ SID: '%s' }" v.SID
+        | HasInputDTO v -> sprintf "{ Type: '%s' }" v.Type
         | FileLocationIsDTO v -> sprintf "{ BasicPath: '%s' }" v.BasicPath
-        | SimulationIsDTO v -> sprintf "{ Checksum: '%s' }" v.Checksum
+        | HasOutputDTO -> sprintf "{ }"
 
 
 let getRelationships (relationship: string, relationshipProperty: string option, relationshipPropertyValue: string option) =
@@ -375,6 +375,8 @@ let relateNodes (sourceNode': Node) (targetNode': Node) (relationship: string) (
             let relationshipAttributes = getRelationshipAttributes(p)
             sprintf "(sourceNode)-[:%s%s]->(targetNode)" relationship relationshipAttributes
         | None -> sprintf "(sourceNode)-[:%s]->(targetNode)" relationship
+    // printfn "relationshipProperty: %A" relationshipProperty
+    // printfn "queryRelationship: %A" queryRelationship
     clientWithCypher
         .Match(querySource, queryTarget)
         .Where(fun (sourceNode) -> sourceNode.Checksum = sourceNodeAttributes.KeyValue)
@@ -463,7 +465,8 @@ let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid
 let relateOutputFilesToSimulation (files: list<Domain.Node>) (checksum: string) =
     let simulationNode = Simulation { Checksum = Checksum checksum }
     List.iter (fun inputFile -> 
-        relateNodes inputFile simulationNode "OUTPUT_OF_SIMULATION" None
+        // relateNodes inputFile simulationNode "OUTPUT_OF_SIMULATION" None
+        relateNodes simulationNode inputFile "HAS_OUTPUT" None
     ) files
 
 let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) = 
@@ -499,7 +502,8 @@ let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) =
                 Input.inputFileResult f inputDirectory "AirPressureInput"
             | _ -> None
         ) input
-    let inputFiles = files |> List.filter (Option.isSome) |> List.map (Option.get)
+    let inputFilesWithType = files |> List.filter (Option.isSome) |> List.map (Option.get)
+    let inputFiles = inputFilesWithType |> List.map fst
     let result = createMultipleNodesIfNotExist inputFiles
 
     // Sha checksum the whole input list and create the relationships and nodes in Neo4j
@@ -511,9 +515,12 @@ let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) =
     createNodeIfNotExist simulationNode
 
     // Relate the file nodes with simulation
-    List.iter (fun inputFile -> 
-        relateNodes inputFile simulationNode "INPUT_IN_SIMULATION" None
-    ) inputFiles
+    List.iter (fun (inputFile, relationship) -> 
+        let relationshipProps = Some (HasInputDTO ({ Type = relationship }))
+        printfn "relationshipProps:: %A" relationshipProps
+        // relateNodes inputFile simulationNode "INPUT_IN_SIMULATION" relationshipProps
+        relateNodes simulationNode inputFile "HAS_INPUT" relationshipProps
+    ) inputFilesWithType
 
 
     // TODO: seperate as a function

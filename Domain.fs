@@ -110,7 +110,7 @@ type File = {
   Name: Name
   Format: Format
   Checksum: Checksum
-  Type: FileType
+  // Type: FileType
 }
 
 // Input from Config
@@ -215,7 +215,10 @@ let getChecksumListArrayFromNodes (nodes: list<Node>)=
       | File f -> 
           let (Checksum checksum) = f.Checksum
           let (Name fileName) = f.Name
-          Some (sprintf "%s-%s" checksum fileName)
+          match fileName with 
+          | Util.RegexGroup "(\w{40}-)(.*)" 0 fileName -> 
+            Some (fileName)
+          | _ -> Some (sprintf "%s-%s" checksum fileName)
       | _ ->  None
   )
   |> Array.filter Option.isSome

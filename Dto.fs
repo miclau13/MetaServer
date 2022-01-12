@@ -93,7 +93,7 @@ type FileDto = {
   Name: string
   Format: string
   Checksum: string
-  Type: string
+  // Type: string
 }
 
 type NodeDto = {
@@ -105,19 +105,20 @@ type NodeDto = {
 }
 
 type HasInputDTO = {
-  SID: string
+  Type: string
 }
 
 type FileLocationIsDTO = {
   BasicPath: string
 }
-type SimulationIsDTO = {
-  Checksum: string
-}
+// type HasOutputDTO = {
+//   // Type: string
+// }
+
 type RelationshipDto = 
   | HasInputDTO of HasInputDTO
   | FileLocationIsDTO of FileLocationIsDTO
-  | SimulationIsDTO of SimulationIsDTO
+  | HasOutputDTO 
 
 /// Define a type to represent possible errors
 type DtoError =
@@ -883,8 +884,8 @@ module FileDto =
     let name = file.Name |> Name.value
     let path = file.Path |> Path.value
     let format = file.Format |> Format.value
-    let fileType = file.Type |> FileType.value
-    let dto = { Checksum = checksum; Name = name; Path = path; Format = format; Type = fileType } 
+    // let fileType = file.Type |> FileType.value
+    let dto = { Checksum = checksum; Name = name; Path = path; Format = format } 
     dto
 
   /// create a domain object from a DTO
@@ -896,14 +897,14 @@ module FileDto =
       let! name = data.Name |> Name.create "Name"
       let! path = data.Path |> Path.create "Path"
       let! format = data.Format |> Format.create "Format"
-      let! fileType = data.Format |> FileType.create "FileType"
+      // let! fileType = data.Format |> FileType.create "FileType"
       // combine the components to create the domain object
       return {
         Checksum = checksum
         Name = name
         Path = path
         Format = format
-        Type = fileType
+        // Type = fileType
       }
     }
 
