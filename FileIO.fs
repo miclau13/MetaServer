@@ -104,12 +104,13 @@ let decompressFile originalFileName targetFileName =
     else
         printfn "Source File does not exist."
 
+// Modified on 12 Jan - Use one directory level only
 let getPathInfoFromChecksum (checksum: string) = 
     let directoryLevel1 = checksum.[0..1]
-    let directoryLevel2 = checksum.[2..3]
-    let fileName = checksum.[4..]
-    let path = sprintf "/%s/%s/" directoryLevel1 directoryLevel2
-    (path, directoryLevel1, directoryLevel2, fileName)
+    // let directoryLevel2 = checksum.[2..3]
+    let fileName = checksum.[0..]
+    let path = sprintf "/%s/" directoryLevel1 
+    (path, directoryLevel1, fileName)
 
 let copyFile (sourceBasePath, sourceDirectory) (targetBasePath, targetDirectory) (file: File) =
     let targetDirectoryWithBasePath = getFullPathWithBasePath targetBasePath targetDirectory
@@ -117,7 +118,7 @@ let copyFile (sourceBasePath, sourceDirectory) (targetBasePath, targetDirectory)
     createDirectoryIfNotExist targetDirectoryWithBasePath
     // Create the full directory 
     let (Checksum checksum) = file.Checksum
-    let (checksumDirectory, _, _, checksumFileName) = getPathInfoFromChecksum checksum
+    let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
     let targetWithBasePath = getFullPathWithBasePath targetDirectoryWithBasePath checksumDirectory
     createDirectoryIfNotExist targetWithBasePath
     
@@ -125,7 +126,7 @@ let copyFile (sourceBasePath, sourceDirectory) (targetBasePath, targetDirectory)
     let (Name fileName) = file.Name
     let (Format fileFormat) = file.Format
     let sourceFileName = sprintf "%s.%s" fileName fileFormat
-    let targetFileName = getChecksumFileName checksumFileName fileName
+    let targetFileName = getChecksumFileName checksumFileName sourceFileName
     let sourcePath = Path.Combine(sourceDirectoryWithBasePath, sourceFileName)
     let targetPath = Path.Combine(targetWithBasePath, targetFileName)
     if not <| checkIfFileExist targetPath then
@@ -157,7 +158,7 @@ let createTreeFile (basePath, targetDirectory) (commitChecksums: string []) =
     let targetDirectoryWithBasePath = getFullPathWithBasePath basePath targetDirectory
     createDirectoryIfNotExist targetDirectoryWithBasePath
     
-    let (checksumDirectory, _, _, checksumFileName) = getPathInfoFromChecksum checksum
+    let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
     let targetFileName = getChecksumFileName checksumFileName "tree"
     let targetWithBasePath = getFullPathWithBasePath targetDirectoryWithBasePath checksumDirectory
     let targetPath = Path.Combine(targetWithBasePath, targetFileName)

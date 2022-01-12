@@ -119,7 +119,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 match inputFiles with
                 | Ok nodes -> 
                     fst nodes
-                    |> copyInputFiles (basePath, inputSourceDirectory, (sprintf "%s%s" outputDirectory "/input")) 
+                    |> copyInputFiles (basePath, inputSourceDirectory, outputDirectory) 
                 | Error e -> failwith e
 
                 let commitsChecksum = 
@@ -137,7 +137,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 // Start dealing with output
                 let (checksum, _) = FileIO.getChecksumInfoFromChecksumArray commitsChecksum
-                let (checksumDirectory, _, _, checksumFileName) = getPathInfoFromChecksum checksum
+                let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
                 let targetDirectoryWithBasePath = getFullPathWithBasePath basePath outputDirectory
                 let targetWithBasePath = sprintf "%s/%s" targetDirectoryWithBasePath "output"
                 let dstPath = getFullPathWithBasePath targetWithBasePath checksumDirectory
