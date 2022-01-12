@@ -47,25 +47,29 @@ let getChecksumFromFile (path: string) =
   else
     sprintf "File %s does not exist." path
 
-let inputFileResult (file: string) (inputDirectory: string) = 
+let inputFileResult (file: string) (inputDirectory: string) (fileType: string) = 
   let name = (file.Split [|'.'|]).[0]
   let format = (file.Split [|'.'|]).[1]
   let fileLocation = sprintf "%s%s" inputDirectory file
-  let checksum = 
-    // If input is in nc format, check if it has checksum in its file name
-    // If yes then use the checksum directly, otherwise generate checksum 
-    match name with 
-    | RegexGroup "(\w{40}-)(.*)" 0 name  -> 
-      printfn "inputFileResult name %s" name
-      name
-    | _ -> getChecksumFromFile fileLocation
-  let result = File {
-      Path = Path inputDirectory
-      Name = Name name
-      Format = Format format
-      Checksum = Checksum (checksum)
-  }
-  Some (result)
+  if (IO.File.Exists fileLocation) then
+    let checksum = 
+      // If input is in nc format, check if it has checksum in its file name
+      // If yes then use the checksum directly, otherwise generate checksum 
+      match name with 
+      | RegexGroup "(\w{40}-)(.*)" 0 name  -> 
+        printfn "inputFileResult name %s" name
+        name
+      | _ -> getChecksumFromFile fileLocation
+    let result = File {
+        Path = Path inputDirectory
+        Name = Name name
+        Format = Format format
+        Checksum = Checksum (checksum)
+        Type = FileType fileType
+    }
+    Some (result)
+  else 
+    None
 
 let getChecksum (str: string) = 
   let bytes = 
@@ -98,6 +102,7 @@ let initOutputFileNodes (files: IO.FileInfo []) (dir: string) =
           Name = Name name
           Format = Format format
           Checksum = Checksum (checksum)
+          Type = FileType "Output"
       }
       // printfn "initOutputFileNodes result: %A" result
       result

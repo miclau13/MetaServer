@@ -57,9 +57,11 @@ let getFullPathWithBasePath (basePath: string) (path: string) =
     | p -> sprintf "%s%s" p path
 
 let checkIfFileExist path =
+    printfn "File already existed with path: %s" path
     File.Exists path
 
 let checkIfDirectoryExist path =
+    printfn "Directory already existed with path: %s" path
     Directory.Exists path
 
 let createDirectoryIfNotExist path = 
@@ -112,7 +114,7 @@ let getPathInfoFromChecksum (checksum: string) =
     let path = sprintf "/%s/" directoryLevel1 
     (path, directoryLevel1, fileName)
 
-let copyFile (sourceBasePath, sourceDirectory) (targetBasePath, targetDirectory) (file: File) =
+let copyFile (sourceBasePath: string, sourceDirectory: string) (targetBasePath: string, targetDirectory: string) (file: File) =
     let targetDirectoryWithBasePath = getFullPathWithBasePath targetBasePath targetDirectory
     // Create the outer directory
     createDirectoryIfNotExist targetDirectoryWithBasePath
@@ -129,11 +131,14 @@ let copyFile (sourceBasePath, sourceDirectory) (targetBasePath, targetDirectory)
     let targetFileName = getChecksumFileName checksumFileName sourceFileName
     let sourcePath = Path.Combine(sourceDirectoryWithBasePath, sourceFileName)
     let targetPath = Path.Combine(targetWithBasePath, targetFileName)
-    if not <| checkIfFileExist targetPath then
-        File.Copy(sourcePath, targetPath)
-        printfn "%s --- copied to ---> %s" sourcePath targetPath
-    else
-        printfn "targetPath (%s) already exists."  targetPath
+    File.Copy(sourcePath, targetPath)
+    printfn "%s --- copied to ---> %s" sourcePath targetPath
+    // if not <| checkIfFileExist targetPath then
+    //     File.Copy(sourcePath, targetPath)
+    //     printfn "%s --- copied to ---> %s" sourcePath targetPath
+    // else
+    //     printfn "targetPath (%s) already exists."  targetPath
+
     // compressFile targetPath (targetPath+".gz")
     // decompressFile (targetPath+".gz") (targetPath+".ungz")
     // sprintf "%s-%s" checksum fileName
@@ -179,3 +184,40 @@ let createTreeFile (basePath, targetDirectory) (commitChecksums: string []) =
             printfn "Tree Content No Created with Error: %s" ex.Message
     else 
         printfn "TargetPath (%s) already exists" targetPath
+
+// The logic is filename with sha1-checksum meaning existed
+let isOutputFileExisted (fileName: string) =
+    match fileName with 
+    | Input.RegexGroup "(\w{40}-)(.*)" 0 fileName  -> 
+        printfn "Output file already existed with name: %s" fileName 
+        true
+    | _ -> false
+
+let isInputFileExisted (targetBasePath: string, targetDirectory: string) (file: File) =
+    let targetDirectoryWithBasePath = getFullPathWithBasePath targetBasePath targetDirectory
+
+    let (Checksum checksum) = file.Checksum
+    let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
+    let targetWithBasePath = getFullPathWithBasePath targetDirectoryWithBasePath checksumDirectory
+    
+    let (Name fileName) = file.Name
+    let (Format fileFormat) = file.Format
+    let sourceFileName = sprintf "%s.%s" fileName fileFormat
+    let targetFileName = getChecksumFileName checksumFileName sourceFileName
+    let targetPath = Path.Combine(targetWithBasePath, targetFileName)
+    checkIfFileExist targetPath
+
+// Do not copy existing file again 
+let isFileExisted (targetBasePath: string, targetDirectory: string) (inputFile: File)  = 
+    let (Name fileName) = inputFile.Name
+    (isOutputFileExisted fileName) || (isInputFileExisted (targetBasePath, targetDirectory) inputFile)
+
+let filterExistedFiles (targetBasePath: string, targetDirectory: string) (inputFiles: list<Domain.Node> ) = 
+    inputFiles
+    |> List.filter(fun item -> 
+        match item with 
+        | File f -> not <| isFileExisted (targetBasePath, targetDirectory)  f
+        | _ ->  
+            printfn "Item is not defined in the domain" 
+            true
+    )

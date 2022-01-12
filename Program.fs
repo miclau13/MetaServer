@@ -111,7 +111,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let shouldCleanAll = argz.Contains(CleanAll)
                 if shouldCleanAll then
                     Neo4j.deleteAllNodes()
-                let result = Neo4j.createMultipleNodesIfNotExist input
+                // let result = Neo4j.createMultipleNodesIfNotExist input
                 // printfn "result:%A" result
                 let inputFiles = Neo4j.createAndRelateInitInputFilesFromInput input
                 // printfn "inputFiles:%A" inputFiles
@@ -119,6 +119,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 match inputFiles with
                 | Ok nodes -> 
                     fst nodes
+                    |> filterExistedFiles (basePath, outputDirectory) 
                     |> copyInputFiles (basePath, inputSourceDirectory, outputDirectory) 
                 | Error e -> failwith e
 

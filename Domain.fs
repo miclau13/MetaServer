@@ -88,6 +88,15 @@ module Format =
         Ok (Format str)
   let value format = match format with | Format f -> f
 
+type FileType = FileType of string
+module FileType =
+  let create fieldName str :Result<FileType, string> =
+    if (String.IsNullOrEmpty(str)) then
+        Error (fieldName + " must be non-empty")
+    else
+        Ok (FileType str)
+  let value format = match format with | FileType f -> f
+
 type Simulation = {
   Checksum: Checksum
 }
@@ -101,6 +110,7 @@ type File = {
   Name: Name
   Format: Format
   Checksum: Checksum
+  Type: FileType
 }
 
 // Input from Config

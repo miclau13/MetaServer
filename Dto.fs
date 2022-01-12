@@ -93,6 +93,7 @@ type FileDto = {
   Name: string
   Format: string
   Checksum: string
+  Type: string
 }
 
 type NodeDto = {
@@ -882,7 +883,8 @@ module FileDto =
     let name = file.Name |> Name.value
     let path = file.Path |> Path.value
     let format = file.Format |> Format.value
-    let dto = { Checksum = checksum; Name = name; Path = path; Format = format } 
+    let fileType = file.Type |> FileType.value
+    let dto = { Checksum = checksum; Name = name; Path = path; Format = format; Type = fileType } 
     dto
 
   /// create a domain object from a DTO
@@ -894,12 +896,14 @@ module FileDto =
       let! name = data.Name |> Name.create "Name"
       let! path = data.Path |> Path.create "Path"
       let! format = data.Format |> Format.create "Format"
+      let! fileType = data.Format |> FileType.create "FileType"
       // combine the components to create the domain object
       return {
         Checksum = checksum
         Name = name
         Path = path
         Format = format
+        Type = fileType
       }
     }
 

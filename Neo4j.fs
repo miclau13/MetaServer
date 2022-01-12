@@ -63,6 +63,7 @@ let demoGridFile = File {
     Name = Name "grid1"
     Format = Format "grd"
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8z"
+    Type = FileType "Grid"
 }
 
 let demoFVCOMInput = FVCOMInput {
@@ -106,6 +107,7 @@ let demoFVCOMInputFile = File {
     Name = Name "run"
     Format = Format "nml"
     Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8y"
+    Type = FileType "DEMO"
 }
 
 let demoRiverInputFile = File {
@@ -113,6 +115,7 @@ let demoRiverInputFile = File {
     Name = Name "RiverNamelist"
     Format = Format "nml"
     Checksum = Checksum "5a2ff2c3d786a668d2f4da470d2e2edef57b73e9"
+    Type = FileType "DEMO"
 }
 
 let demoGridCoorInputFile = File {
@@ -120,6 +123,7 @@ let demoGridCoorInputFile = File {
     Name = Name "Ti1_grd"
     Format = Format "dat"
     Checksum = Checksum "c6d1b7d99be4abb63d32e4a3ee1c19ee04e8ab71"
+    Type = FileType "DEMO"
 }
 
 // let initNodes = [demoGrid; demoFVCOMInputFile; demoGridFile; demoFVCOMInput]
@@ -340,7 +344,7 @@ let createNodeIfNotExist (node: Node) =
     let nodeLabel = nodeAttributes.Label
     let nodeKey = nodeAttributes.Key
     let nodeKeyValue = nodeAttributes.KeyValue
-    let query = sprintf "(node:%s {%s: $nodeKeyValue})"  nodeLabel nodeKey
+    let query = sprintf "(node:%s {%s: $nodeKeyValue})" nodeLabel nodeKey
     let client' = getClientWithNodeInputParameter clientWithCypher node
     client'
         .Merge(query)
@@ -459,7 +463,7 @@ let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid
 let relateOutputFilesToSimulation (files: list<Domain.Node>) (checksum: string) =
     let simulationNode = Simulation { Checksum = Checksum checksum }
     List.iter (fun inputFile -> 
-        relateNodes inputFile simulationNode "SIMULATION_IS" None
+        relateNodes inputFile simulationNode "OUTPUT_OF_SIMULATION" None
     ) files
 
 let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) = 
@@ -483,13 +487,16 @@ let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) =
             match node with 
             | RiverInput n -> 
                 let (InfoFile f) = n.InfoFile
-                Input.inputFileResult f inputDirectory
+                Input.inputFileResult f inputDirectory "RiverInput"
             | GridCoordinatesInput n -> 
                 let (InputFile f) = n.File
-                Input.inputFileResult f inputDirectory
+                Input.inputFileResult f inputDirectory "GridCoordinatesInput"
             | HeatingInput n -> 
                 let (InputFile f) = n.File
-                Input.inputFileResult f inputDirectory
+                Input.inputFileResult f inputDirectory "HeatingInput"
+            | AirPressureInput n -> 
+                let (InputFile f) = n.File
+                Input.inputFileResult f inputDirectory "AirPressureInput"
             | _ -> None
         ) input
     let inputFiles = files |> List.filter (Option.isSome) |> List.map (Option.get)
@@ -502,16 +509,18 @@ let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) =
     // let commitChecksum = FileIO.getChecksumFileName checksum "tree"
     let simulationNode = Simulation { Checksum = Checksum checksum }
     createNodeIfNotExist simulationNode
-    List.iter (fun inputFile -> 
-        relateNodes inputFile simulationNode "SIMULATION_IS" None
-    ) input
 
-    // Relate the nodes with file locations
+    // Relate the file nodes with simulation
+    List.iter (fun inputFile -> 
+        relateNodes inputFile simulationNode "INPUT_IN_SIMULATION" None
+    ) inputFiles
+
+
     // TODO: seperate as a function
-    let inputs = input |> List.filter (fun item -> match item with | RiverInput _ | GridCoordinatesInput _ | HeatingInput _ -> true | _ -> false) 
-    List.iter2 (fun input inputFile -> 
-        relateNodes input inputFile "FILE_LOCATION_IS" None
-    ) inputs inputFiles
+    // let inputs = input |> List.filter (fun item -> match item with | RiverInput _ | GridCoordinatesInput _ | HeatingInput _ -> true | _ -> false) 
+    // List.iter2 (fun input inputFile -> 
+    //     relateNodes input inputFile "FILE_LOCATION_IS" None
+    // ) inputs inputFiles
     result
 
 let createInitInputFilesIfNotExist () = createMultipleNodesIfNotExist initInputFiles

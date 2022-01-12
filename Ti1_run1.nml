@@ -133,7 +133,7 @@
  PRECIPITATION_EVP       =  0.0000000E+00,
  AIRPRESSURE_ON  = F,
  AIRPRESSURE_KIND        = 'variable'                        ,
- AIRPRESSURE_FILE        = 'Titania_wnd_all.nc'                                                   ,
+ AIRPRESSURE_FILE        = 'Titania_nest_all.nc'                                                   ,
  AIRPRESSURE_VALUE       =  1.0000000E+5,
  WAVE_ON = F,
  WAVE_FILE       = 'Titania_wnd_all.nc'                                                         ,
@@ -221,7 +221,7 @@
  OBC_LONGSHORE_FLOW_FILE = 'none'                                                                   
  /
  &NML_GRID_COORDINATES
- GRID_FILE       = 'Ti1_grd2.dat',
+ GRID_FILE       = 'Ti1_grd.dat',
  GRID_FILE_UNITS = 'meters',
  PROJECTION_REFERENCE    = 'none',
  SIGMA_LEVELS_FILE       = 'Ti1_sigma.dat',
