@@ -4,6 +4,9 @@ open System.Security.Cryptography
 open System
 open Domain
 open Util
+open IOInput
+open OBCInput
+open RiverInput
 type RawInput =
     { RawString : string }
 
@@ -39,29 +42,32 @@ let getChecksumFromFile (path: string) =
   else
     sprintf "File %s does not exist." path
 
-let inputFileResult (file: string) (inputDirectory: string) (fileType: string) = 
-  let name = (file.Split [|'.'|]).[0]
-  let format = (file.Split [|'.'|]).[1]
-  let fileLocation = sprintf "%s%s" inputDirectory file
-  if (IO.File.Exists fileLocation) then
-    let checksum = 
-      // If input is in nc format, check if it has checksum in its file name
-      // If yes then use the checksum directly, otherwise generate checksum 
-      match name with 
-      | Util.RegexGroup "(\w{40}-)(.*)" 0 name  -> 
-        printfn "inputFileResult name %s" name
-        name
-      | _ -> getChecksumFromFile fileLocation
-    let result = File {
-        Path = Path inputDirectory
-        Name = Name name
-        Format = Format format
-        Checksum = Checksum (checksum)
-        // Type = FileType fileType
-    }
-    Some (result, fileType)
-  else 
-    None
+let getInputFileResult (file: string) (inputDirectory: string) (fileType: string) = 
+  match file with
+  | Util.RegexGroup "\." 0 _ ->
+    let name = (file.Split [|'.'|]).[0]
+    let format = (file.Split [|'.'|]).[1]
+    let fileLocation = sprintf "%s%s" inputDirectory file
+    if (IO.File.Exists fileLocation) then
+      let checksum = 
+        // If input is in nc format, check if it has checksum in its file name
+        // If yes then use the checksum directly, otherwise generate checksum 
+        match name with 
+        | Util.RegexGroup "(\w{40}-)(.*)" 0 name  -> 
+          printfn "inputFileResult name %s" name
+          name
+        | _ -> getChecksumFromFile fileLocation
+      let result = File {
+          Path = Path inputDirectory
+          Name = Name name
+          Format = Format format
+          Checksum = Checksum (checksum)
+      }
+      Some (result, fileType)
+    else 
+      None
+  | _ -> None
+
 
 let getChecksum (str: string) = 
   let bytes = 
@@ -370,3 +376,63 @@ let parserResultToDomain (result: list<string>) =
       | _ -> Array.append acc [|Error "No suitable toDomain"|] 
     ) Array.empty
     // |> printfn "parserResultToDomain result:%A" 
+
+let findIOInput (nodes: Node list) = 
+  List.find (
+      function 
+      | Domain.IOInput _ -> true
+      | _ -> false
+  ) nodes
+
+let getIOInputDirectory (node: Node) = 
+    node 
+    |> function 
+        | Domain.IOInput n -> 
+            let (InputDirectory dir) = n.InputDirectory
+            dir
+        | _ -> ""
+
+let getFileResult (inputDirectory: string) (node: Node)  = 
+    match node with 
+    | Simulation _ -> None
+    | Grid _ -> None
+    | File _ -> None
+    | Domain.AirPressureInput n -> 
+        let (InputFile file) = n.File
+        getInputFileResult file inputDirectory "AirPressureInput"
+    | Domain.FVCOMInput _ ->
+        None
+    | Domain.GridCoordinatesInput n -> 
+        let (InputFile file) = n.File
+        getInputFileResult file inputDirectory "GridCoordinatesInput"
+    | Domain.HeatingInput n -> 
+        let (InputFile file) = n.File
+        getInputFileResult file inputDirectory "HeatingInput"
+    | Domain.IOInput _ -> 
+        None
+    | Domain.NetCDFInput _ -> 
+      None
+    | Domain.OBCInput n -> 
+        let (NodeListFile file) = n.NodeListFile
+        getInputFileResult file inputDirectory "OBCInput"
+    | Domain.RiverInput n -> 
+        let (InfoFile file) = n.InfoFile
+        getInputFileResult file inputDirectory "RiverInput"
+    | Domain.StartupInput n -> 
+        let (InputFile file) = n.File
+        getInputFileResult file inputDirectory "StartupInput"
+    | Domain.StartupXInput n -> 
+        let (InputFile file) = n.File
+        getInputFileResult file inputDirectory "StartupXInput"
+    | Domain.WaveInput n -> 
+        let (InputFile file) = n.File
+        getInputFileResult file inputDirectory "WaveInput"
+    | Domain.WindInput n -> 
+        let (InputFile file) = n.File
+        getInputFileResult file inputDirectory "WindInput"
+
+let findExistingInputFilesWithType (inputDirectory: string) (inputs: Node list) =  
+      let files = List.map (getFileResult inputDirectory) inputs
+      printfn "files: %A "files
+      let inputFilesWithType = files |> List.filter (Option.isSome) |> List.map (Option.get)
+      inputFilesWithType

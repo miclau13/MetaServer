@@ -1,16 +1,9 @@
 module Neo4j
-open System
 open Neo4jClient
-open Neo4j.Driver
 open FSharp.Json
 
 open Dto
-open Db
 open Domain
-open IOInput
-open RiverInput
-
-open System.Collections.Generic;
 
 [<CLIMutable>]
 type NodeAttributes = {
@@ -19,120 +12,26 @@ type NodeAttributes = {
     // TODO find real type of Key value
     KeyValue: string
 }
-type File = {
-    Path: string
-    Name: string
-    Format: string
+type Neo4jNode = {
+    // Path: string
+    // Name: string
+    // Format: string
     Checksum: string
 }
 
+type RelationShipInfo = {
+    SourceNode: Node 
+    TargetNode: Node 
+    Relationship: string 
+    RelationshipProps: RelationshipDto option 
+}
 type Neo4jOutputData<'T> = {
     data: 'T
 }
 
 type Neo4jOutput<'T> = Neo4jOutputData<'T> * string * seq<string>
 
-type FVCOMInput = {
-    Checksum: string
-    StartDate: string
-    EndDate: string
-}
-type River = {
-    Checksum: string
-    RiverName: string
-    RiverGridLocation: int
-    RiverVerticalDistribution: list<float>
-    RiverFile: string
-}
-
 let clientWithCypher = Db.getDbClient ()
-
-let demoHasInput1 = HasInputDTO { Type = "1" }
-let demoHasInput2 = HasInputDTO { Type = "2" }
-let demoFileLocationis1 = FileLocationIsDTO { BasicPath = "root" }
-let demoFileLocationis2 = FileLocationIsDTO { BasicPath = "src" }
-let demoFileLocationis3 = FileLocationIsDTO { BasicPath = "." }
-
-let demoGrid = Grid {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8a"
-    NodeNumber = NodeNumber 4
-}
-
-let demoGridFile = File {
-    Path = Path "/minio/demo/PO8/grid/"
-    Name = Name "grid1"
-    Format = Format "grd"
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8z"
-    // Type = FileType "Grid"
-}
-
-let demoFVCOMInput = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c10b"
-    StartDate = FVCOMInput.StartDate "28/12/2021"
-    EndDate = FVCOMInput.EndDate "29/12/2021"
-    CaseTitle = FVCOMInput.CaseTitle "Titania"
-    DateFormat = FVCOMInput.DateFormat"YMD"
-    TimeZone = FVCOMInput.TimeZone "UTC"
-}
-
-let demoFVCOMInput1 = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c9b"
-    StartDate = FVCOMInput.StartDate "28/12/2021"
-    EndDate = FVCOMInput.EndDate "29/12/2021"
-    CaseTitle = FVCOMInput.CaseTitle "Titania"
-    DateFormat = FVCOMInput.DateFormat"YMD"
-    TimeZone = FVCOMInput.TimeZone "UTC"
-}
-
-let demoFVCOMInput2 = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8b"
-    StartDate = FVCOMInput.StartDate "28/12/2021"
-    EndDate = FVCOMInput.EndDate "29/12/2021"
-    CaseTitle = FVCOMInput.CaseTitle "Titania"
-    DateFormat = FVCOMInput.DateFormat"YMD"
-    TimeZone = FVCOMInput.TimeZone "UTC"
-}
-
-let demoFVCOMInput3 = FVCOMInput {
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c11b"
-    StartDate = FVCOMInput.StartDate "18/12/2021"
-    EndDate = FVCOMInput.EndDate "19/12/2021"
-    CaseTitle = FVCOMInput.CaseTitle "Titania"
-    DateFormat = FVCOMInput.DateFormat"YMD"
-    TimeZone = FVCOMInput.TimeZone "UTC"
-}
-
-let demoFVCOMInputFile = File {
-    Path = Path "/minio/demo/PO8/"
-    Name = Name "run"
-    Format = Format "nml"
-    Checksum = Checksum "163fbce9f5dfc1ea8355340bf35f68e20f3c7c8y"
-    // Type = FileType "DEMO"
-}
-
-let demoRiverInputFile = File {
-    Path = Path "/input/"
-    Name = Name "RiverNamelist"
-    Format = Format "nml"
-    Checksum = Checksum "5a2ff2c3d786a668d2f4da470d2e2edef57b73e9"
-    // Type = FileType "DEMO"
-}
-
-let demoGridCoorInputFile = File {
-    Path = Path "/input/"
-    Name = Name "Ti1_grd"
-    Format = Format "dat"
-    Checksum = Checksum "c6d1b7d99be4abb63d32e4a3ee1c19ee04e8ab71"
-    // Type = FileType "DEMO"
-}
-
-// let initNodes = [demoGrid; demoFVCOMInputFile; demoGridFile; demoFVCOMInput]
-// let initGrids = [demoGrid]
-// let initGridsLabels = ["Grid"]
-// let initFiles = [demoFVCOMInputFile; demoGridFile]
-// let initFilesLabels = ["File"]
-let initFVCOMInput = [demoFVCOMInput; demoFVCOMInput1; demoFVCOMInput2; demoFVCOMInput3; demoGrid; demoGridFile]
-let initInputFiles = [demoRiverInputFile; demoGridCoorInputFile]
 
 let getNodeLabel (node: Node) =
     let label =
@@ -202,7 +101,6 @@ let getRelationshipAttributes (relationship: RelationshipDto) =
         | HasInputDTO v -> sprintf "{ Type: '%s' }" v.Type
         | FileLocationIsDTO v -> sprintf "{ BasicPath: '%s' }" v.BasicPath
         | HasOutputDTO -> sprintf "{ }"
-
 
 let getRelationships (relationship: string, relationshipProperty: string option, relationshipPropertyValue: string option) =
     // let queryMatchTo = sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship relationshipProperty relationshipPropertyValue
@@ -290,24 +188,44 @@ let getNodesByLabel (label: string) =
         result |> Async.AwaitTask |> Async.RunSynchronously
         |> toListInDomainFormat
     nodes
+
+// 13/1/2022
+let getClientWithCreateRelationStr (sourceNodeName, targetNodeName, relationship, relationshipProps) (client: Cypher.ICypherFluentQuery)   =
+    let queryRelationshipStr = 
+        match relationshipProps with
+        | Some p -> 
+            let relationshipAttributes = getRelationshipAttributes(p)
+            sprintf "(%s)-[:%s%s]->(%s)" sourceNodeName relationship relationshipAttributes targetNodeName
+        | None -> sprintf "(%s)-[:%s]->(%s)" sourceNodeName relationship targetNodeName
+    client.Create(queryRelationshipStr)
+
+let getClientWithMergeStr (str: string) (client: Cypher.ICypherFluentQuery) =
+    client.Merge(str)
+
+let getClientWithKeyValueParameter (key: string, value: string) (client: Cypher.ICypherFluentQuery)  =
+    client.WithParam(key, value)
+
+let getClientWithSetStr (str: string) (client: Cypher.ICypherFluentQuery)   =
+    client.Set(str)
+
 // 8/11/2021
-let getClientWithNodeInputParameter (client: Cypher.ICypherFluentQuery) (node: Node) = 
+let getClientWithNodeInputParameter (node: Node) (paramName: string) (client: Cypher.ICypherFluentQuery) = 
     match node with 
-        | Simulation simulation -> client.WithParam("node", (SimulationDto.fromDomain simulation))
-        | File file -> client.WithParam("node", (FileDto.fromDomain file))
-        | Grid grid -> client.WithParam("node", (GridDto.fromDomain grid))
-        | AirPressureInput input -> client.WithParam("node", (AirPressureInputDto.fromDomain input))
-        | FVCOMInput input -> client.WithParam("node", (FVCOMInputDto.fromDomain input))
-        | GridCoordinatesInput input -> client.WithParam("node", (GridCoordinatesInputDto.fromDomain input))
-        | HeatingInput input -> client.WithParam("node", (HeatingInputDto.fromDomain input))
-        | IOInput input -> client.WithParam("node", (IOInputDto.fromDomain input))
-        | NetCDFInput input -> client.WithParam("node", (NetCDFInputDto.fromDomain input))
-        | OBCInput input -> client.WithParam("node", (OBCInputDto.fromDomain input))
-        | RiverInput input -> client.WithParam("node", (RiverInputDto.fromDomain input))
-        | StartupInput input -> client.WithParam("node", (StartupInputDto.fromDomain input))
-        | StartupXInput input -> client.WithParam("node", (StartupXInputDto.fromDomain input))
-        | WaveInput input -> client.WithParam("node", (WaveInputDto.fromDomain input))
-        | WindInput input -> client.WithParam("node", (WindInputDto.fromDomain input))
+    | Simulation simulation -> client.WithParam(paramName, (SimulationDto.fromDomain simulation))
+    | File file -> client.WithParam(paramName, (FileDto.fromDomain file))
+    | Grid grid -> client.WithParam(paramName, (GridDto.fromDomain grid))
+    | AirPressureInput input -> client.WithParam(paramName, (AirPressureInputDto.fromDomain input))
+    | FVCOMInput input -> client.WithParam(paramName, (FVCOMInputDto.fromDomain input))
+    | GridCoordinatesInput input -> client.WithParam(paramName, (GridCoordinatesInputDto.fromDomain input))
+    | HeatingInput input -> client.WithParam(paramName, (HeatingInputDto.fromDomain input))
+    | IOInput input -> client.WithParam(paramName, (IOInputDto.fromDomain input))
+    | NetCDFInput input -> client.WithParam(paramName, (NetCDFInputDto.fromDomain input))
+    | OBCInput input -> client.WithParam(paramName, (OBCInputDto.fromDomain input))
+    | RiverInput input -> client.WithParam(paramName, (RiverInputDto.fromDomain input))
+    | StartupInput input -> client.WithParam(paramName, (StartupInputDto.fromDomain input))
+    | StartupXInput input -> client.WithParam(paramName, (StartupXInputDto.fromDomain input))
+    | WaveInput input -> client.WithParam(paramName, (WaveInputDto.fromDomain input))
+    | WindInput input -> client.WithParam(paramName, (WindInputDto.fromDomain input))
 
 
 let getNodeAttributes (node: Node) = 
@@ -339,30 +257,53 @@ let getAllNodes () =
         |> toListInDomainFormat
     nodes
 
-let createNodeIfNotExist (node: Node) =
+let convertNodeToQueryStr (index: int) (node: Node) =
     let nodeAttributes = getNodeAttributes node
     let nodeLabel = nodeAttributes.Label
     let nodeKey = nodeAttributes.Key
     let nodeKeyValue = nodeAttributes.KeyValue
-    let query = sprintf "(node:%s {%s: $nodeKeyValue})" nodeLabel nodeKey
-    let client' = getClientWithNodeInputParameter clientWithCypher node
-    client'
-        .Merge(query)
-        .OnCreate()
-        .Set("node = $node")
-        .WithParam("nodeKeyValue", nodeKeyValue)
-        .ExecuteWithoutResultsAsync()
-    |> Async.AwaitTask |> Async.RunSynchronously
+    let mergeStr = sprintf "(node%i:%s {%s: $nodeKeyValue%i})" index nodeLabel nodeKey index
+    (mergeStr, index, node, nodeKeyValue)
 
-let createMultipleNodesIfNotExist nodes =
+let getReducedMergeQueryStr (strList: string list) = 
+    List.reduce (
+        fun acc str -> 
+            sprintf "%s,%s" acc str
+    ) strList
+
+let createNodesIfNotExist (nodes: Node list) =
+    let queriesForNodes = List.mapi convertNodeToQueryStr nodes
+    let clientWithSetStrAndParam = 
+        List.fold (
+            fun acc (mergeStr, index, node, nodeKeyValue) -> 
+                let nodeName = sprintf "node%i" index
+                let setStr = sprintf "%s = $%s" nodeName nodeName
+                let nodeKey = sprintf "nodeKeyValue%i" index 
+                let client' = acc |> getClientWithMergeStr mergeStr
+                client'.OnCreate()
+                |> getClientWithSetStr setStr
+                |> getClientWithNodeInputParameter node nodeName
+                |> getClientWithKeyValueParameter (nodeKey, nodeKeyValue)
+                
+        ) clientWithCypher queriesForNodes
+        
+    clientWithSetStrAndParam.ExecuteWithoutResultsAsync()
+    |> Async.AwaitTask 
+    |> Async.RunSynchronously
+    let message = sprintf "%A are created successfully!" nodes
+    printfn "%s" message
+
+let createSingleNodeIfNotExist (node: Node) =
+    let nodes = [node]
+    createNodesIfNotExist nodes
+
+let createMultipleNodesIfNotExist (nodes: Node list) =
     try
-        List.iter createNodeIfNotExist nodes
-        let message = sprintf "%A are created successfully!" nodes
-        Ok(nodes, message)
+        createNodesIfNotExist nodes
     with
     | error ->
         let message = sprintf "Exception in creating nodes: %s" error.Message
-        Error(message)
+        printfn "%A" message
 
 let relateNodes (sourceNode': Node) (targetNode': Node) (relationship: string) (relationshipProperty: RelationshipDto option) =
     let sourceNodeAttributes = getNodeAttributes(sourceNode')
@@ -408,7 +349,7 @@ let create (node: Node) =
         try
             let label = getNodeLabel node
             let query = sprintf "(n:%s $node)" label 
-            let client' = getClientWithNodeInputParameter clientWithCypher node
+            let client' = getClientWithNodeInputParameter node "node" clientWithCypher
             client'
                 .Create(query)
                 .ExecuteWithoutResultsAsync()
@@ -430,7 +371,7 @@ let update (node: Node) =
         try
             let label = getNodeLabel node
             let query = sprintf "(n:%s)" label
-            let client' = getClientWithNodeInputParameter clientWithCypher node
+            let client' = getClientWithNodeInputParameter node "node" clientWithCypher
             client'
                 .Match(query)
                 .ExecuteWithoutResultsAsync()
@@ -446,89 +387,47 @@ let update (node: Node) =
 
     cypherUpdate node
 
-let deleteDemoGrid () = deleteNode demoGrid
+let convertRelationToQueryStr (index: int) (relationShipInfo: RelationShipInfo) =
+    let sourceNode = relationShipInfo.SourceNode
+    let targetNode = relationShipInfo.TargetNode
+    let relationship = relationShipInfo.Relationship
+    let relationshipProps = relationShipInfo.RelationshipProps
+    let sourceNodeAttributes = getNodeAttributes(sourceNode)
+    let targetNodeAttributes = getNodeAttributes(targetNode)
+    let sourceNodeName = sprintf "%s%i" "sourceNode" index
+    let targetNodeName = sprintf "%s%i" "targetNode" index
+    let querySourceStr = sprintf "(%s:%s{ %s: '%s' })" sourceNodeName sourceNodeAttributes.Label sourceNodeAttributes.Key sourceNodeAttributes.KeyValue
+    let queryTargetStr = sprintf "(%s:%s{ %s: '%s' })" targetNodeName targetNodeAttributes.Label sourceNodeAttributes.Key targetNodeAttributes.KeyValue
+    let queryRelationshipStr = 
+        match relationshipProps with
+        | Some p -> 
+            let relationshipAttributes = getRelationshipAttributes(p)
+            sprintf "(%s)-[:%s%s]->(%s)" sourceNodeName relationship relationshipAttributes targetNodeName
+        | None -> sprintf "(%s)-[:%s]->(%s)" sourceNodeName relationship targetNodeName
+    (querySourceStr, queryTargetStr, queryRelationshipStr, index, sourceNodeName, sourceNodeAttributes.KeyValue, targetNodeName, targetNodeAttributes.KeyValue, relationship)
 
-let createInitNodesIfNotExist () = createMultipleNodesIfNotExist initFVCOMInput
+let createNodesRelationship (relationShipInfos: RelationShipInfo list)=
+    let queriesForNodes = List.mapi convertRelationToQueryStr relationShipInfos
+    let clientWithMatchParam = 
+        List.fold (
+            fun (acc: Cypher.ICypherFluentQuery) (querySourceStr, queryTargetStr, queryRelationshipStr, index, sourceNodeName, sourceNodeKeyValue, targetNodeName, targetNodeKeyValue, relationship) -> 
+                acc.Match(querySourceStr, queryTargetStr)
+        ) clientWithCypher queriesForNodes
+    let clientWithCreateParam = 
+        List.fold (
+            fun (acc: Cypher.ICypherFluentQuery) (querySourceStr, queryTargetStr, queryRelationshipStr, index, sourceNodeName, sourceNodeKeyValue, targetNodeName, targetNodeKeyValue, relationship) -> 
+                acc.Create(queryRelationshipStr)
+        ) clientWithMatchParam queriesForNodes
+    clientWithCreateParam.ExecuteWithoutResultsAsync()
+    |> Async.AwaitTask 
+    |> Async.RunSynchronously
+    let message = sprintf "%A are created successfully!" relationShipInfos
+    printfn "%s" message
 
-let relateInitNodes () = 
-    relateNodes demoFVCOMInput1 demoFVCOMInput2 "HAS_INPUT" (Some demoHasInput1)
-    relateNodes demoFVCOMInput2 demoGrid "HAS_INPUT" (Some demoHasInput2)
-    relateNodes demoFVCOMInput2 demoGridFile "FILE_LOCATION_IS" (Some demoFileLocationis2)
-    relateNodes demoFVCOMInput2 demoFVCOMInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
-    relateNodes demoFVCOMInput demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
-    relateNodes demoFVCOMInput3 demoFVCOMInput1 "HAS_INPUT" (Some demoHasInput1)
-    // relateNodes demoFVCOMInput demoGrid "HAS_INPUT"
-    // printfn "%A" "relateInitNodes"
-
-let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid
-
-let relateOutputFilesToSimulation (files: list<Domain.Node>) (checksum: string) =
-    let simulationNode = Simulation { Checksum = Checksum checksum }
-    List.iter (fun inputFile -> 
-        relateNodes simulationNode inputFile "HAS_OUTPUT" None
-    ) files
-
-let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) = 
-    let inputNode = 
-        List.find (
-            function 
-            | IOInput _ -> true
-            | _ -> false
-        ) input
-    // printfn "inputNode: %A" inputNode
-    let inputDirectory = 
-        inputNode 
-        |> function 
-            | IOInput n -> 
-                let (InputDirectory d) = n.InputDirectory
-                d
-            | _ -> ""
-    // printfn "inputDirectory: %A" inputDirectory
-    let files = 
-        List.map(fun node ->
-            match node with 
-            | RiverInput n -> 
-                let (InfoFile f) = n.InfoFile
-                Input.inputFileResult f inputDirectory "RiverInput"
-            | GridCoordinatesInput n -> 
-                let (InputFile f) = n.File
-                Input.inputFileResult f inputDirectory "GridCoordinatesInput"
-            | HeatingInput n -> 
-                let (InputFile f) = n.File
-                Input.inputFileResult f inputDirectory "HeatingInput"
-            | AirPressureInput n -> 
-                let (InputFile f) = n.File
-                Input.inputFileResult f inputDirectory "AirPressureInput"
-            | _ -> None
-        ) input
-    let inputFilesWithType = files |> List.filter (Option.isSome) |> List.map (Option.get)
-    let inputFiles = inputFilesWithType |> List.map fst
-    let result = createMultipleNodesIfNotExist inputFiles
-
-    // Sha checksum the whole input list and create the relationships and nodes in Neo4j
-    // TODO: seperate as a function
-    let nodesChecksum = Domain.getChecksumListArrayFromNodes inputFiles
-    let (checksum, _) = FileIO.getChecksumInfoFromChecksumArray nodesChecksum
-    let simulationNode = Simulation { Checksum = Checksum checksum }
-    createNodeIfNotExist simulationNode
-
-    // Relate the file nodes with simulation
-    List.iter (fun (inputFile, relationship) -> 
-        let relationshipProps = Some (HasInputDTO ({ Type = relationship }))
-        relateNodes simulationNode inputFile "HAS_INPUT" relationshipProps
-    ) inputFilesWithType
-
-    result
-
-let createInitInputFilesIfNotExist () = createMultipleNodesIfNotExist initInputFiles
-
-// let relateInitInputFiles (input: list<Domain.Node>) = 
-//     List.iter (fun (node: Domain.Node) -> 
-//         match node with 
-//         | RiverInput _ -> relateNodes node demoRiverInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
-//         | GridCoordinatesInput _ -> relateNodes node demoGridCoorInputFile "FILE_LOCATION_IS" (Some demoFileLocationis1)
-//         | _ -> printfn "Others"
-//     ) input
-
-
-    // printfn "%A" "relateInitInputFiles"
+let relateMultipleNodes (relationShipInfos: RelationShipInfo list) =
+    try
+        createNodesRelationship relationShipInfos
+    with
+    | error ->
+        let message = sprintf "Exception in creating nodes relationship: %s" error.Message
+        printfn "%A" message

@@ -87,7 +87,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             match configContentResult with
             | Ok r ->
                 let resultInDomain = r |> Input.parserResultToDomain
-                // printfn "resultInDomain:%A" resultInDomain
                 // Filter out the items that haven't defined in the domain
                 let validInputResults = 
                     resultInDomain |> Array.filter (fun item -> 
@@ -95,9 +94,8 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         | Ok _ -> true
                         | _ -> false
                     )
-                // printfn "validInputResults:%A" validInputResults
                // Unwrap the value from the result type
-                let input = 
+                let nodes = 
                     validInputResults 
                     |> Array.Parallel.map (fun item -> 
                         match item with 
@@ -105,61 +103,76 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         | Error e -> failwith e
                     )
                     |> Array.toList
-                // printfn "input:%A" input
 
                 // Delete All Previous Nodes if specified
                 let shouldCleanAll = argz.Contains(CleanAll)
                 if shouldCleanAll then
                     Neo4j.deleteAllNodes()
-                // let result = Neo4j.createMultipleNodesIfNotExist input
-                // printfn "result:%A" result
-                let inputFiles = Neo4j.createAndRelateInitInputFilesFromInput input
-                // printfn "inputFiles:%A" inputFiles
+
+                // First, parse the input config file to get the directory of input
+                let IOInput = Input.findIOInput nodes
+                let inputDirectory = Input.getIOInputDirectory IOInput
+                // Next, get the input files 
+                let inputFilesWithType = Input.findExistingInputFilesWithType inputDirectory nodes
+                let inputFiles = inputFilesWithType |> List.map fst
+                // Side effect: Create the files node in DB
+                Neo4j.createMultipleNodesIfNotExist inputFiles
+
+                // Sha checksum the whole input list
+                let nodesChecksum = Domain.getChecksumListArrayFromNodes inputFiles
+                let (inputListChecksum, _) = FileIO.getChecksumInfoFromChecksumArray nodesChecksum
+                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputListChecksum }
+                // Side effect: Create the relationship node in DB
+                Neo4j.createSingleNodeIfNotExist simulationNode
+
+                // Side effect: Relate the file nodes with simulation
+                let inputRelationshipInfos: Neo4j.RelationShipInfo list = 
+                    List.map (
+                        fun (inputFile, relationship) -> 
+                            let relationshipProps = Some (Dto.HasInputDTO ({ Type = relationship }))
+                            { SourceNode = simulationNode ; TargetNode = inputFile ; Relationship = "HAS_INPUT" ; RelationshipProps = relationshipProps }
+                    ) inputFilesWithType
+
+                Neo4j.relateMultipleNodes inputRelationshipInfos
                 // Side effect: copy input files
-                match inputFiles with
-                | Ok nodes -> 
-                    fst nodes
-                    |> filterExistedFiles (basePath, outputDirectory) 
-                    |> copyInputFiles (basePath, inputSourceDirectory, outputDirectory) 
-                | Error e -> failwith e
-
-                let commitsChecksum = 
-                    match inputFiles with
-                    | Ok nodes -> 
-                        fst nodes
-                        |> Domain.getChecksumListArrayFromNodes
-                    | Error e -> failwith e
-
+                inputFiles
+                |> filterExistedFiles (basePath, outputDirectory) 
+                |> copyInputFiles (basePath, inputSourceDirectory, outputDirectory) 
+                
+                let commitsChecksum = inputFiles |> Domain.getChecksumListArrayFromNodes
+                // Side effect: create the tree file
                 createTreeFile (basePath, outputDirectory) commitsChecksum
-                // // End of dealing with input
-                // // Neo4j.relateInitInputFiles input
-                // // Neo4j.createInitNodesIfNotExist() |> ignore
-                // // Neo4j.relateInitNodes ()
 
-                let (checksum, _) = FileIO.getChecksumInfoFromChecksumArray commitsChecksum
+                // End of dealing with input
+
                 // Start dealing with output
-                let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
+                // Get the target path by tree checksum
+                let (checksumDirectory, _, _) = getPathInfoFromChecksum inputListChecksum
                 let targetDirectoryWithBasePath = getFullPathWithBasePath basePath outputDirectory
                 let targetWithBasePath = sprintf "%s/%s" targetDirectoryWithBasePath "output"
                 let dstPath = getFullPathWithBasePath targetWithBasePath checksumDirectory
+                // Get the source output data path 
                 let srcPath = getFullPathWithBasePath basePath outputSourceDirectory
-                // printfn "dstPath:%A" dstPath
-                // printfn "srcPath:%A" srcPath
-                directoryCopy srcPath dstPath checksum false
-                // Input.inputFileResult f inputDirectory
+                // Side effect: copy output data to the target path
+                directoryCopy srcPath dstPath inputListChecksum false
+
+                // Get the source output data path 
                 let outputFiles = getAllFilesInDirectory dstPath
-                // printfn "outputFiles:%A" outputFiles
                 let outputFileNodes = Input.initOutputFileNodes outputFiles dstPath
-                // printfn "outputFileNodes:%A" outputFileNodes
-                // let output = 
-                let result = Neo4j.createMultipleNodesIfNotExist outputFileNodes
-                // printfn "result:%A" result
-                Neo4j.relateOutputFilesToSimulation outputFileNodes checksum
+                // Side effect: Create the output node in DB
+                Neo4j.createMultipleNodesIfNotExist outputFileNodes
+                // Side effect: Relate the output nodes with simulation
+                let outputRelationshipInfos: Neo4j.RelationShipInfo list = 
+                    List.map (
+                        fun file -> 
+                            { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
+                    ) outputFileNodes
+                Neo4j.relateMultipleNodes outputRelationshipInfos
                 // End of dealing with output
                 
                 // Start creating directory for the calculation
                 let caseTitle = "Titania"
-                createCalDirectory checksum caseTitle
+                createCalDirectory inputListChecksum caseTitle
                 // End of creating directory for the calculation
                 Ok ()
             | Error e -> 
@@ -172,9 +185,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 Error ArgumentsNotSpecified
     | _ ->
         Neo4j.deleteAllNodes()
-        let result = Neo4j.createInitNodesIfNotExist ()
-        printfn "Result: %A " result
-        Neo4j.relateInitNodes ()
         Ok ()
 
 let runList (runArgs: ParseResults<ListArgs>) =
