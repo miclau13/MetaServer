@@ -5,37 +5,6 @@ open Neo4jClient
 open Neo4j.Driver
 open Settings
 
-[<CLIMutable>]
-
-type Simulation = {
-    Checksum: string
-}
-
-type File = {
-    Path: string
-    Name: string
-    Format: string
-    Checksum: string
-}
-
-type Grid = {
-    Checksum: string
-    NodeNumber: int
-}
-
-type FVCOMInput = {
-    Checksum: string
-    StartDate: string
-    EndDate: string
-}
-type River = {
-    Checksum: string
-    RiverName: string
-    RiverGridLocation: int
-    RiverVerticalDistribution: list<float>
-    RiverFile: string
-}
-
 let getDbClient () =
     let boltUri = Uri(appsettings.BoltURL)
     let sandboxUserName = appsettings.NeoUser

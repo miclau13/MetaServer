@@ -131,13 +131,13 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     | Error e -> failwith e
 
                 createTreeFile (basePath, outputDirectory) commitsChecksum
-                // End of dealing with input
-                // Neo4j.relateInitInputFiles input
-                // Neo4j.createInitNodesIfNotExist() |> ignore
-                // Neo4j.relateInitNodes ()
+                // // End of dealing with input
+                // // Neo4j.relateInitInputFiles input
+                // // Neo4j.createInitNodesIfNotExist() |> ignore
+                // // Neo4j.relateInitNodes ()
 
-                // Start dealing with output
                 let (checksum, _) = FileIO.getChecksumInfoFromChecksumArray commitsChecksum
+                // Start dealing with output
                 let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
                 let targetDirectoryWithBasePath = getFullPathWithBasePath basePath outputDirectory
                 let targetWithBasePath = sprintf "%s/%s" targetDirectoryWithBasePath "output"
@@ -157,6 +157,10 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 Neo4j.relateOutputFilesToSimulation outputFileNodes checksum
                 // End of dealing with output
                 
+                // Start creating directory for the calculation
+                let caseTitle = "Titania"
+                createCalDirectory checksum caseTitle
+                // End of creating directory for the calculation
                 Ok ()
             | Error e -> 
                 let errorMessage = sprintf "E: %A" e

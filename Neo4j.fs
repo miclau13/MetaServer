@@ -465,7 +465,6 @@ let createInitNodeIfNotExist () = createNodeIfNotExist demoGrid
 let relateOutputFilesToSimulation (files: list<Domain.Node>) (checksum: string) =
     let simulationNode = Simulation { Checksum = Checksum checksum }
     List.iter (fun inputFile -> 
-        // relateNodes inputFile simulationNode "OUTPUT_OF_SIMULATION" None
         relateNodes simulationNode inputFile "HAS_OUTPUT" None
     ) files
 
@@ -510,24 +509,15 @@ let createAndRelateInitInputFilesFromInput (input: list<Domain.Node>) =
     // TODO: seperate as a function
     let nodesChecksum = Domain.getChecksumListArrayFromNodes inputFiles
     let (checksum, _) = FileIO.getChecksumInfoFromChecksumArray nodesChecksum
-    // let commitChecksum = FileIO.getChecksumFileName checksum "tree"
     let simulationNode = Simulation { Checksum = Checksum checksum }
     createNodeIfNotExist simulationNode
 
     // Relate the file nodes with simulation
     List.iter (fun (inputFile, relationship) -> 
         let relationshipProps = Some (HasInputDTO ({ Type = relationship }))
-        printfn "relationshipProps:: %A" relationshipProps
-        // relateNodes inputFile simulationNode "INPUT_IN_SIMULATION" relationshipProps
         relateNodes simulationNode inputFile "HAS_INPUT" relationshipProps
     ) inputFilesWithType
 
-
-    // TODO: seperate as a function
-    // let inputs = input |> List.filter (fun item -> match item with | RiverInput _ | GridCoordinatesInput _ | HeatingInput _ -> true | _ -> false) 
-    // List.iter2 (fun input inputFile -> 
-    //     relateNodes input inputFile "FILE_LOCATION_IS" None
-    // ) inputs inputFiles
     result
 
 let createInitInputFilesIfNotExist () = createMultipleNodesIfNotExist initInputFiles

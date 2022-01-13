@@ -223,3 +223,16 @@ let filterExistedFiles (targetBasePath: string, targetDirectory: string) (inputF
             printfn "Item is not defined in the domain" 
             true
     )
+
+let createCalDirectory (checksum: string) (caseTitle: string) =
+    // Create the cal directory
+    let calDirectory = "/cal"
+    let calDirectoryWithBasePath = getFullPathWithBasePath "" calDirectory
+    printfn "simDirectoryWithBasePath: %s" calDirectoryWithBasePath
+    createDirectoryIfNotExist calDirectoryWithBasePath
+    // Create the simulation directory
+    let currentTimeStamp = DateTime.UtcNow.ToString()
+    let simDirectory = sprintf "/%s-%s-%s" checksum caseTitle currentTimeStamp
+    let simDirectoryWithBasePath = getFullPathWithBasePath calDirectoryWithBasePath simDirectory
+    printfn "simDirectoryWithBasePath: %s" simDirectoryWithBasePath
+    createDirectoryIfNotExist simDirectoryWithBasePath
