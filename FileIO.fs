@@ -46,22 +46,29 @@ let getChecksumInfoFromChecksumArray (checksums: string []) =
         |> Input.getChecksum
     (checksum, checksumStr)
 
+let getFileNameWithFormat (file: File) =
+    let (Name fileName) = file.Name
+    let (Format fileFormat) = file.Format
+    sprintf "%s.%s" fileName fileFormat
+
 let getChecksumFileName (checksum: string) (fileName: string) = 
-    sprintf "%s-%s" checksum fileName
+    match fileName with 
+    | Util.RegexGroup "(\w{40}-)(.*)" 0 _  -> 
+        fileName
+    | _ ->  sprintf "%s-%s" checksum fileName
 
 let getFullPathWithBasePath (basePath: string) (path: string) =
     match basePath with 
     | "." | "" | "./" -> 
         let currentDirectory = Directory.GetCurrentDirectory()
-        sprintf "%s%s" currentDirectory path
-    | p -> sprintf "%s%s" p path
+        Path.Combine(currentDirectory, path)
+    | p -> 
+        Path.Combine(p, path)
 
 let checkIfFileExist path =
-    printfn "File already existed with path: %s" path
     File.Exists path
 
 let checkIfDirectoryExist path =
-    printfn "Directory already existed with path: %s" path
     Directory.Exists path
 
 let createDirectoryIfNotExist path = 
@@ -111,33 +118,32 @@ let getPathInfoFromChecksum (checksum: string) =
     let directoryLevel1 = checksum.[0..1]
     // let directoryLevel2 = checksum.[2..3]
     let fileName = checksum.[0..]
-    let path = sprintf "/%s/" directoryLevel1 
+    // let path = sprintf "/%s/" directoryLevel1 
+    let path = directoryLevel1
     (path, directoryLevel1, fileName)
 
-let copyFile (sourceBasePath: string, sourceDirectory: string) (targetBasePath: string, targetDirectory: string) (file: File) =
-    let targetDirectoryWithBasePath = getFullPathWithBasePath targetBasePath targetDirectory
-    // Create the outer directory
-    createDirectoryIfNotExist targetDirectoryWithBasePath
-    // Create the full directory 
+let getChecksumFilePathInfo (basePath: string, directory: string) (file: File) =
+    let directoryWithBasePath = getFullPathWithBasePath basePath directory
     let (Checksum checksum) = file.Checksum
     let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
-    let targetWithBasePath = getFullPathWithBasePath targetDirectoryWithBasePath checksumDirectory
-    createDirectoryIfNotExist targetWithBasePath
-    
-    let sourceDirectoryWithBasePath = getFullPathWithBasePath sourceBasePath sourceDirectory
-    let (Name fileName) = file.Name
-    let (Format fileFormat) = file.Format
-    let sourceFileName = sprintf "%s.%s" fileName fileFormat
-    let targetFileName = getChecksumFileName checksumFileName sourceFileName
-    let sourcePath = Path.Combine(sourceDirectoryWithBasePath, sourceFileName)
-    let targetPath = Path.Combine(targetWithBasePath, targetFileName)
-    File.Copy(sourcePath, targetPath)
-    printfn "%s --- copied to ---> %s" sourcePath targetPath
-    // if not <| checkIfFileExist targetPath then
-    //     File.Copy(sourcePath, targetPath)
-    //     printfn "%s --- copied to ---> %s" sourcePath targetPath
-    // else
-    //     printfn "targetPath (%s) already exists."  targetPath
+    let filePathWithChecksumDir = Path.Combine(directoryWithBasePath, checksumDirectory)
+    let fileNameWithFormat = getFileNameWithFormat file
+    let targetFileName = getChecksumFileName checksumFileName fileNameWithFormat
+    let fullPath = Path.Combine(filePathWithChecksumDir, targetFileName)
+    fullPath, filePathWithChecksumDir, targetFileName
+
+let copyFile (sourceBasePath: string, sourceDirectory: string) (targetBasePath: string, targetDirectory: string) (file: File) =
+    let sourceFileNameWithFormat = getFileNameWithFormat file
+    let sourceFileDir = Path.Combine (sourceBasePath, sourceDirectory)
+    let sourcePath = Path.Combine (sourceFileDir, sourceFileNameWithFormat)
+    let (targetPath, targetDir, _) = getChecksumFilePathInfo (targetBasePath, targetDirectory) (file)
+    // Create directory before copying file
+    createDirectoryIfNotExist targetDir
+    if checkIfDirectoryExist targetDir then
+        File.Copy(sourcePath, targetPath)
+        printfn "%s --- copied to ---> %s" sourcePath targetPath
+    else 
+        printfn "Target Dir (%s) does not exist, could not copy file to there" targetDir
 
     // compressFile targetPath (targetPath+".gz")
     // decompressFile (targetPath+".gz") (targetPath+".ungz")
@@ -167,7 +173,7 @@ let createTreeFile (basePath, targetDirectory) (commitChecksums: string []) =
     
     let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
     let targetFileName = getChecksumFileName checksumFileName "tree"
-    let targetWithBasePath = getFullPathWithBasePath targetDirectoryWithBasePath checksumDirectory
+    let targetWithBasePath = Path.Combine(targetDirectoryWithBasePath, checksumDirectory)
     let targetPath = Path.Combine(targetWithBasePath, targetFileName)
     let commit = getChecksumFileName checksum "tree"
     let treeContent = 
@@ -200,11 +206,9 @@ let isInputFileExisted (targetBasePath: string, targetDirectory: string) (file: 
 
     let (Checksum checksum) = file.Checksum
     let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
-    let targetWithBasePath = getFullPathWithBasePath targetDirectoryWithBasePath checksumDirectory
-    
-    let (Name fileName) = file.Name
-    let (Format fileFormat) = file.Format
-    let sourceFileName = sprintf "%s.%s" fileName fileFormat
+    let targetWithBasePath = Path.Combine(targetDirectoryWithBasePath, checksumDirectory)
+
+    let sourceFileName = getFileNameWithFormat file
     let targetFileName = getChecksumFileName checksumFileName sourceFileName
     let targetPath = Path.Combine(targetWithBasePath, targetFileName)
     checkIfFileExist targetPath
@@ -214,7 +218,7 @@ let isFileExisted (targetBasePath: string, targetDirectory: string) (inputFile: 
     let (Name fileName) = inputFile.Name
     (isOutputFileExisted fileName) || (isInputFileExisted (targetBasePath, targetDirectory) inputFile)
 
-let filterExistedFiles (targetBasePath: string, targetDirectory: string) (inputFiles: list<Domain.Node> ) = 
+let filterOutExistedFiles (targetBasePath: string, targetDirectory: string) (inputFiles: list<Domain.Node> ) = 
     inputFiles
     |> List.filter(fun item -> 
         match item with 
@@ -224,15 +228,96 @@ let filterExistedFiles (targetBasePath: string, targetDirectory: string) (inputF
             true
     )
 
-let createCalDirectory (checksum: string) (caseTitle: string) =
-    // Create the cal directory
-    let calDirectory = "/cal"
-    let calDirectoryWithBasePath = getFullPathWithBasePath "" calDirectory
-    printfn "simDirectoryWithBasePath: %s" calDirectoryWithBasePath
-    createDirectoryIfNotExist calDirectoryWithBasePath
-    // Create the simulation directory
-    let currentTimeStamp = DateTime.UtcNow.ToString()
-    let simDirectory = sprintf "/%s-%s-%s" checksum caseTitle currentTimeStamp
-    let simDirectoryWithBasePath = getFullPathWithBasePath calDirectoryWithBasePath simDirectory
-    printfn "simDirectoryWithBasePath: %s" simDirectoryWithBasePath
-    createDirectoryIfNotExist simDirectoryWithBasePath
+let getCalDirectory = "cal"
+
+let getCalDirectoryFullPath (basePath: string) = 
+    let calDirectory = getCalDirectory
+    let calDirectoryWithBasePath = getFullPathWithBasePath basePath calDirectory
+    calDirectoryWithBasePath
+
+let getSimulationDirectoryPath (checksum: string, caseTitle: string, timestamp: string) = 
+    sprintf "%s-%s-%s" checksum caseTitle timestamp
+
+// Create the cal directory
+let createCalDirectoryIfNotExist (basePath: string) =
+    let calDirectoryFullPath = getCalDirectoryFullPath basePath 
+    if not <| checkIfDirectoryExist calDirectoryFullPath then
+        createDirectoryIfNotExist calDirectoryFullPath
+
+// Create the simulation directory
+let createSimulationDirectoryIfNotExist (checksum: string) (caseTitle: string) (basePath: string) (timestamp: string) = 
+    // createCalDirectoryIfNotExist basePath
+    let calDirectoryFullPath = getCalDirectoryFullPath basePath 
+
+    let simDirectory = getSimulationDirectoryPath (checksum, caseTitle, timestamp)
+    let simDirectoryWithBasePath = getFullPathWithBasePath calDirectoryFullPath simDirectory
+    if not <| checkIfDirectoryExist simDirectoryWithBasePath then
+        createDirectoryIfNotExist simDirectoryWithBasePath
+
+let getFilePathResult (basePath: string, outputDirectory: string) (node: Node) =
+    match node with 
+    | Domain.File file -> 
+        let info = getChecksumFilePathInfo (basePath, outputDirectory) (file)
+        Some info
+    | _ -> 
+        printfn "The Node is not a file, cannot get file Path: %A" node
+        None
+
+let getFilesPath (basePath: string, outputDirectory: string) (nodes: Node list) =
+    nodes
+    |> List.map (fun file -> 
+            getFilePathResult (basePath, outputDirectory) file
+        )
+    |> List.filter (Option.isSome)
+    |> List.map (Option.get)
+
+let getOutputTargetPath (basePath: string, outputDirectory: string) (inputListChecksum: string) = 
+    let (checksumDirectory, _, _) = getPathInfoFromChecksum inputListChecksum
+    let targetDirectoryWithBasePath = getFullPathWithBasePath basePath outputDirectory
+    let targetWithBasePath = Path.Combine(targetDirectoryWithBasePath, "output")
+    targetWithBasePath
+    // let dstPath = Path.Combine(targetWithBasePath, checksumDirectory)
+    // dstPath
+
+let getOutputTargetPathWithChecksumDir (path: string,  checksum: string) = 
+    let (checksumDirectory, _, _) = getPathInfoFromChecksum checksum
+    let dstPath = Path.Combine(path, checksumDirectory)
+    dstPath
+
+let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: string) (inputFiles: Node list, inputTargetDir: string) (outputFiles: Node list, outputTargetDir: string) =
+    let currentTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.sssZ")
+
+    // Create Cal Dir
+    createSimulationDirectoryIfNotExist (checksum) (caseTitle) (basePath) (currentTimeStamp)
+
+    let inputFilesWithPath = getFilesPath (basePath, inputTargetDir) inputFiles
+    let simDir = getSimulationDirectoryPath (checksum, caseTitle, currentTimeStamp) 
+
+    // Create symbolic link for the input files
+    inputFilesWithPath
+    |> Array.ofList
+    |> Array.Parallel.iter (
+        fun file -> 
+            let (fileFullPath, filePathWithChecksumDir, targetFileName) = file
+            let calDirWithBasePath = Path.Combine(basePath, getCalDirectory)
+            let simDirWithBasePath = Path.Combine(calDirWithBasePath, simDir)
+            let symbolicLinkPath = Path.Combine(simDirWithBasePath, targetFileName)
+            System.IO.File.CreateSymbolicLink(symbolicLinkPath, fileFullPath) |> ignore
+    )
+    
+     // Create symbolic link for the output files
+    let outputFilesWithPath = getFilesPath (basePath, outputTargetDir) outputFiles
+    outputFilesWithPath
+    |> Array.ofList
+    |> Array.Parallel.iter (
+        fun file -> 
+            let (fileFullPath, filePathWithChecksumDir, targetFileName) = file
+            let calDirWithBasePath = Path.Combine(basePath, getCalDirectory)
+            let simDirWithBasePath = Path.Combine(calDirWithBasePath, simDir)
+            let symbolicLinkPath = Path.Combine(simDirWithBasePath, targetFileName)
+            // if not <| checkIfFileExist filePathWithChecksumDir then
+                // createDirectoryIfNotExist simDirectoryWithBasePath
+            System.IO.File.CreateSymbolicLink(symbolicLinkPath, fileFullPath) |> ignore
+    )
+
+

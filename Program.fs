@@ -69,14 +69,14 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             let basePathArgs = runArgs.GetResult(BasePath, Some ".")
             let basePath = defaultArg basePathArgs "."
             // Get the input source directory if any
-            let inputSourceDirectoryArgs = runArgs.GetResult(InputSourceDirectory, Some "/input")
-            let inputSourceDirectory = defaultArg inputSourceDirectoryArgs "/input"
+            let inputSourceDirectoryArgs = runArgs.GetResult(InputSourceDirectory, Some "input")
+            let inputSourceDirectory = defaultArg inputSourceDirectoryArgs "input"
             // Get the output source directory if any
-            let outputSourceDirectoryArgs = runArgs.GetResult(OutputSourceDirectory, Some "/output")
-            let outputSourceDirectory = defaultArg outputSourceDirectoryArgs "/output"
+            let outputSourceDirectoryArgs = runArgs.GetResult(OutputSourceDirectory, Some "output")
+            let outputSourceDirectory = defaultArg outputSourceDirectoryArgs "output"
             // Get the ouput directory if any
-            let outputDirectoryArgs = runArgs.GetResult(OutputDirectory, Some "/data")
-            let outputDirectory = defaultArg outputDirectoryArgs "/data"
+            let outputDirectoryArgs = runArgs.GetResult(OutputDirectory, Some "data")
+            let outputDirectory = defaultArg outputDirectoryArgs "data"
 
             // Start dealing with input
             // Get the content from the config file
@@ -136,7 +136,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 Neo4j.relateMultipleNodes inputRelationshipInfos
                 // Side effect: copy input files
                 inputFiles
-                |> filterExistedFiles (basePath, outputDirectory) 
+                |> filterOutExistedFiles (basePath, outputDirectory) 
                 |> copyInputFiles (basePath, inputSourceDirectory, outputDirectory) 
                 
                 let commitsChecksum = inputFiles |> Domain.getChecksumListArrayFromNodes
@@ -147,10 +147,8 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 // Start dealing with output
                 // Get the target path by tree checksum
-                let (checksumDirectory, _, _) = getPathInfoFromChecksum inputListChecksum
-                let targetDirectoryWithBasePath = getFullPathWithBasePath basePath outputDirectory
-                let targetWithBasePath = sprintf "%s/%s" targetDirectoryWithBasePath "output"
-                let dstPath = getFullPathWithBasePath targetWithBasePath checksumDirectory
+                let outputTargetPath = getOutputTargetPath (basePath, outputDirectory) inputListChecksum
+                let dstPath = getOutputTargetPathWithChecksumDir (outputTargetPath, inputListChecksum) 
                 // Get the source output data path 
                 let srcPath = getFullPathWithBasePath basePath outputSourceDirectory
                 // Side effect: copy output data to the target path
@@ -172,7 +170,8 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 
                 // Start creating directory for the calculation
                 let caseTitle = "Titania"
-                createCalDirectory inputListChecksum caseTitle
+                printfn "outputFileNodes: %A" outputFileNodes
+                createSimulationFolder inputListChecksum caseTitle basePath (inputFiles, outputDirectory) (outputFileNodes, outputTargetPath)
                 // End of creating directory for the calculation
                 Ok ()
             | Error e -> 
