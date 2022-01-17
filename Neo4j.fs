@@ -290,8 +290,8 @@ let createNodesIfNotExist (nodes: Node list) =
     clientWithSetStrAndParam.ExecuteWithoutResultsAsync()
     |> Async.AwaitTask 
     |> Async.RunSynchronously
-    let message = sprintf "%A are created successfully!" nodes
-    printfn "%s" message
+    // let message = sprintf "%A are created successfully!" nodes
+    // printfn "%s" message
 
 let createSingleNodeIfNotExist (node: Node) =
     let nodes = [node]
@@ -421,8 +421,8 @@ let createNodesRelationship (relationShipInfos: RelationShipInfo list)=
     clientWithCreateParam.ExecuteWithoutResultsAsync()
     |> Async.AwaitTask 
     |> Async.RunSynchronously
-    let message = sprintf "%A are created successfully!" relationShipInfos
-    printfn "%s" message
+    // let message = sprintf "%A are created successfully!" relationShipInfos
+    // printfn "%s" message
 
 let relateMultipleNodes (relationShipInfos: RelationShipInfo list) =
     try

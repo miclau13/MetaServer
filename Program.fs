@@ -169,8 +169,14 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // End of dealing with output
                 
                 // Start creating directory for the calculation
-                let caseTitle = "Titania"
-                printfn "outputFileNodes: %A" outputFileNodes
+
+                // Get the title from FVCOMInput
+                let FVCOMInputNode = 
+                    nodes |>
+                    List.pick (fun node -> match node with | Domain.FVCOMInput n -> Some n | _ -> None)
+
+                let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
+
                 createSimulationFolder inputListChecksum caseTitle basePath (inputFiles, outputDirectory) (outputFileNodes, outputTargetPath)
                 // End of creating directory for the calculation
                 Ok ()

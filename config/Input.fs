@@ -433,6 +433,5 @@ let getFileResult (inputDirectory: string) (node: Node)  =
 
 let findExistingInputFilesWithType (inputDirectory: string) (inputs: Node list) =  
       let files = List.map (getFileResult inputDirectory) inputs
-      printfn "files: %A "files
       let inputFilesWithType = files |> List.filter (Option.isSome) |> List.map (Option.get)
       inputFilesWithType
