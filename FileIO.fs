@@ -241,18 +241,19 @@ let getSimulationDirectoryPath (checksum: string, caseTitle: string, timestamp: 
 // Create the cal directory
 let createCalDirectoryIfNotExist (basePath: string) =
     let calDirectoryFullPath = getCalDirectoryFullPath basePath 
-    if not <| checkIfDirectoryExist calDirectoryFullPath then
-        createDirectoryIfNotExist calDirectoryFullPath
+    createDirectoryIfNotExist calDirectoryFullPath
 
 // Create the simulation directory
 let createSimulationDirectoryIfNotExist (checksum: string) (caseTitle: string) (basePath: string) (timestamp: string) = 
-    // createCalDirectoryIfNotExist basePath
     let calDirectoryFullPath = getCalDirectoryFullPath basePath 
-
+    // Create Sim dir
     let simDirectory = getSimulationDirectoryPath (checksum, caseTitle, timestamp)
     let simDirectoryWithBasePath = getFullPathWithBasePath calDirectoryFullPath simDirectory
-    if not <| checkIfDirectoryExist simDirectoryWithBasePath then
-        createDirectoryIfNotExist simDirectoryWithBasePath
+    createDirectoryIfNotExist simDirectoryWithBasePath
+
+    // Create Output dir inside Sim Dir
+    let outputDirWithBasePath = Path.Combine(simDirectoryWithBasePath, "output")
+    createDirectoryIfNotExist outputDirWithBasePath
 
 let getFilePathResult (basePath: string, outputDirectory: string) (node: Node) =
     match node with 
@@ -314,9 +315,8 @@ let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: str
             let (fileFullPath, filePathWithChecksumDir, targetFileName) = file
             let calDirWithBasePath = Path.Combine(basePath, getCalDirectory)
             let simDirWithBasePath = Path.Combine(calDirWithBasePath, simDir)
-            let symbolicLinkPath = Path.Combine(simDirWithBasePath, targetFileName)
-            // if not <| checkIfFileExist filePathWithChecksumDir then
-                // createDirectoryIfNotExist simDirectoryWithBasePath
+            let outputDirWithBasePath = Path.Combine(simDirWithBasePath, "output")
+            let symbolicLinkPath = Path.Combine(outputDirWithBasePath, targetFileName)
             System.IO.File.CreateSymbolicLink(symbolicLinkPath, fileFullPath) |> ignore
     )
 
