@@ -166,6 +166,10 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                             { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
                     ) outputFileNodes
                 Neo4j.relateMultipleNodes outputRelationshipInfos
+
+                // Side effect: append the tree file with the output files
+                updateTreeRelatedFiles (basePath, outputDirectory) outputFileNodes inputListChecksum
+
                 // End of dealing with output
                 
                 // Start creating directory for the calculation

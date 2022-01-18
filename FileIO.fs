@@ -159,29 +159,33 @@ let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: 
     )
     // |> ignore
 
-let createTreeFile (basePath, targetDirectory) (commitChecksums: string []) = 
+let getTreePath (basePath: string, targetDirectory: string) (commitChecksum: string) = 
+    let targetDirectoryWithBasePath = getFullPathWithBasePath basePath targetDirectory
+    let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum commitChecksum
+    let targetFileName = getChecksumFileName checksumFileName "tree"
+    let targetDir = Path.Combine(targetDirectoryWithBasePath, checksumDirectory)
+    let targetPath = Path.Combine(targetDir, targetFileName)
+    (targetPath, targetDir)
+
+let createTreeFile (basePath: string, targetDirectory: string) (commitChecksums: string []) = 
     let currentTimeStamp = DateTime.UtcNow.ToString()
     let currentUser = Environment.UserName
 
     let (checksum, checksumStr) = getChecksumInfoFromChecksumArray commitChecksums
-    // printfn "createTreeFile commitChecksums: %A" commitChecksums
-    // printfn "createTreeFile checksumStr: %s" checksumStr
-    
+
+    // Get the tree path info
+    let (targetPath, targetDir) = getTreePath (basePath, targetDirectory) checksum
+
     // Create the directory for the tree
-    let targetDirectoryWithBasePath = getFullPathWithBasePath basePath targetDirectory
-    createDirectoryIfNotExist targetDirectoryWithBasePath
-    
-    let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
-    let targetFileName = getChecksumFileName checksumFileName "tree"
-    let targetWithBasePath = Path.Combine(targetDirectoryWithBasePath, checksumDirectory)
-    let targetPath = Path.Combine(targetWithBasePath, targetFileName)
+    createDirectoryIfNotExist targetDir
+
     let commit = getChecksumFileName checksum "tree"
     let treeContent = 
         sprintf "commit %s\nAuthor: %s\nDate: %s\nRelated files: \n%s" commit currentUser currentTimeStamp checksumStr
     
     if not <| checkIfFileExist targetPath then
         try
-            createDirectoryIfNotExist targetWithBasePath
+            // createDirectoryIfNotExist targetWithBasePath
             let fs = IO.File.Create targetPath
             let info = Text.UTF8Encoding(true).GetBytes(treeContent)
             fs.Write(info, 0, info.Length)
@@ -320,4 +324,24 @@ let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: str
             System.IO.File.CreateSymbolicLink(symbolicLinkPath, fileFullPath) |> ignore
     )
 
+let updateTreeRelatedFiles (basePath: string, targetDirectory: string) (files: Node list) (commitChecksum: string) = 
+    // Get the tree path info
+    let (targetPath, targetDir) = getTreePath (basePath, targetDirectory) commitChecksum
+
+    // Append the files name to related files
+    let commitChecksums = files |> getChecksumListArrayFromNodes
+    let (checksum, checksumStr) = getChecksumInfoFromChecksumArray commitChecksums
+    
+    if checkIfFileExist targetPath then
+        try
+            let fs = IO.File.AppendText targetPath
+            let info = sprintf "%s%s" Environment.NewLine checksumStr
+            fs.WriteLine(info)
+            printfn "Tree Content Updated with %A" info 
+            fs.Close()
+        with 
+            ex -> 
+                printfn "Tree Content did not updated, with Error: %s" ex.Message
+    else 
+        printfn "TargetPath (%s) does not exists, did not update the content." targetPath
 

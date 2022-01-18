@@ -128,21 +128,21 @@ type DtoError =
 type NodeOutput = {
   Checksum: string
   Labels: string []
-  Simulation: Result<Simulation, DtoError> option
-  Grid: Result<Grid, DtoError> option
   File: Result<File, DtoError> option
-  AirPressureInput: Result<AirPressureInput, DtoError> option
-  FVCOMInput: Result<FVCOMInput, DtoError> option
-  GridCoordinatesInput: Result<GridCoordinatesInput, DtoError> option
-  HeatingInput: Result<HeatingInput, DtoError> option
-  IOInput: Result<IOInput, DtoError> option
-  NetCDFInput: Result<NetCDFInput, DtoError> option
-  OBCInput: Result<OBCInput, DtoError> option
-  RiverInput: Result<RiverInput, DtoError> option
-  StartupInput: Result<StartupInput, DtoError> option
-  StartupXInput: Result<StartupXInput, DtoError> option
-  WaveInput: Result<WaveInput, DtoError> option
-  WindInput: Result<WindInput, DtoError> option
+  Simulation: Result<Simulation, DtoError> option
+  // Grid: Result<Grid, DtoError> option
+  // AirPressureInput: Result<AirPressureInput, DtoError> option
+  // FVCOMInput: Result<FVCOMInput, DtoError> option
+  // GridCoordinatesInput: Result<GridCoordinatesInput, DtoError> option
+  // HeatingInput: Result<HeatingInput, DtoError> option
+  // IOInput: Result<IOInput, DtoError> option
+  // NetCDFInput: Result<NetCDFInput, DtoError> option
+  // OBCInput: Result<OBCInput, DtoError> option
+  // RiverInput: Result<RiverInput, DtoError> option
+  // StartupInput: Result<StartupInput, DtoError> option
+  // StartupXInput: Result<StartupXInput, DtoError> option
+  // WaveInput: Result<WaveInput, DtoError> option
+  // WindInput: Result<WindInput, DtoError> option
 }
 type ResultBuilder() =
     member this.Return x = Ok x
@@ -952,98 +952,98 @@ module NodeDto =
     let labelArr = Seq.toArray labels
     let result = 
       {
+          Checksum = ""
           Labels = labelArr
-          Simulation = 
-            if Array.contains "Simulation" labelArr then
-              jsonString 
-              |> SimulationDto.jsonToDomain
-              |> Some
-            else None
-          AirPressureInput = 
-            if Array.contains "AirPressureInput" labelArr then
-              jsonString 
-              |> AirPressureInputDto.jsonToDomain
-              |> Some
-            else None
-          FVCOMInput = 
-            if Array.contains "FVCOMInput" labelArr then
-              jsonString 
-              |> FVCOMInputDto.jsonToDomain
-              |> Some
-            else None
-          GridCoordinatesInput = 
-            if Array.contains "GridCoordinatesInput" labelArr then
-              jsonString 
-              |> GridCoordinatesInputDto.jsonToDomain
-              |> Some
-            else None
-          HeatingInput = 
-            if Array.contains "HeatingInput" labelArr then
-              jsonString 
-              |> HeatingInputDto.jsonToDomain
-              |> Some
-            else None
-          IOInput = 
-            if Array.contains "IOInput" labelArr then
-              jsonString 
-              |> IOInputDto.jsonToDomain
-              |> Some
-            else None
-          NetCDFInput = 
-            if Array.contains "NetCDFInput" labelArr then
-              jsonString 
-              |> NetCDFInputDto.jsonToDomain
-              |> Some
-            else None
-          OBCInput = 
-            if Array.contains "OBCInput" labelArr then
-              jsonString 
-              |> OBCInputDto.jsonToDomain
-              |> Some
-            else None
-          RiverInput = 
-            if Array.contains "RiverInput" labelArr then
-              jsonString 
-              |> RiverInputDto.jsonToDomain
-              |> Some
-            else None
-          StartupInput = 
-            if Array.contains "StartupInput" labelArr then
-              jsonString 
-              |> StartupInputDto.jsonToDomain
-              |> Some
-            else None
-          StartupXInput = 
-            if Array.contains "StartupXInput" labelArr then
-              jsonString 
-              |> StartupXInputDto.jsonToDomain
-              |> Some
-            else None
-          WaveInput = 
-            if Array.contains "WaveInput" labelArr then
-              jsonString 
-              |> WaveInputDto.jsonToDomain
-              |> Some
-            else None
-          WindInput = 
-            if Array.contains "WindInput" labelArr then
-              jsonString 
-              |> WindInputDto.jsonToDomain
-              |> Some
-            else None
           File = 
             if Array.contains "File" labelArr then
               jsonString 
               |> FileDto.jsonToDomain
               |> Some
             else None
-          Grid = 
-            if Array.contains "Grid" labelArr then
+          Simulation = 
+            if Array.contains "Simulation" labelArr then
               jsonString 
-              |> GridDto.jsonToDomain
+              |> SimulationDto.jsonToDomain
               |> Some
             else None
-          Checksum = ""
+          // AirPressureInput = 
+          //   if Array.contains "AirPressureInput" labelArr then
+          //     jsonString 
+          //     |> AirPressureInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // FVCOMInput = 
+          //   if Array.contains "FVCOMInput" labelArr then
+          //     jsonString 
+          //     |> FVCOMInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // GridCoordinatesInput = 
+          //   if Array.contains "GridCoordinatesInput" labelArr then
+          //     jsonString 
+          //     |> GridCoordinatesInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // HeatingInput = 
+          //   if Array.contains "HeatingInput" labelArr then
+          //     jsonString 
+          //     |> HeatingInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // IOInput = 
+          //   if Array.contains "IOInput" labelArr then
+          //     jsonString 
+          //     |> IOInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // NetCDFInput = 
+          //   if Array.contains "NetCDFInput" labelArr then
+          //     jsonString 
+          //     |> NetCDFInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // OBCInput = 
+          //   if Array.contains "OBCInput" labelArr then
+          //     jsonString 
+          //     |> OBCInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // RiverInput = 
+          //   if Array.contains "RiverInput" labelArr then
+          //     jsonString 
+          //     |> RiverInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // StartupInput = 
+          //   if Array.contains "StartupInput" labelArr then
+          //     jsonString 
+          //     |> StartupInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // StartupXInput = 
+          //   if Array.contains "StartupXInput" labelArr then
+          //     jsonString 
+          //     |> StartupXInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // WaveInput = 
+          //   if Array.contains "WaveInput" labelArr then
+          //     jsonString 
+          //     |> WaveInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // WindInput = 
+          //   if Array.contains "WindInput" labelArr then
+          //     jsonString 
+          //     |> WindInputDto.jsonToDomain
+          //     |> Some
+          //   else None
+          // Grid = 
+          //   if Array.contains "Grid" labelArr then
+          //     jsonString 
+          //     |> GridDto.jsonToDomain
+          //     |> Some
+          //   else None
       }
     let checksum = 
         match result with 
@@ -1051,21 +1051,22 @@ module NodeDto =
           match r with 
           | Ok value -> match value.Checksum with | Checksum v -> v
           | Error e -> e.ToString()
-        | { StartupInput = Some r } -> 
-          match r with 
-          | Ok value -> match value.Checksum with | Checksum v -> v
-          | Error e -> e.ToString()
         | { File = Some r } -> 
           match r with 
           | Ok value -> match value.Checksum with | Checksum v -> v
           | Error e -> e.ToString()
-        | { Grid = Some r } -> 
-          match r with 
-          | Ok value -> match value.Checksum with | Checksum v -> v
-          | Error e -> e.ToString()
-        | { FVCOMInput = Some r } -> 
-          match r with 
-          | Ok value -> match value.Checksum with | Checksum v -> v
-          | Error e -> e.ToString()
+        // | { StartupInput = Some r } -> 
+        //   match r with 
+        //   | Ok value -> match value.Checksum with | Checksum v -> v
+        //   | Error e -> e.ToString()
+
+        // | { Grid = Some r } -> 
+        //   match r with 
+        //   | Ok value -> match value.Checksum with | Checksum v -> v
+        //   | Error e -> e.ToString()
+        // | { FVCOMInput = Some r } -> 
+        //   match r with 
+        //   | Ok value -> match value.Checksum with | Checksum v -> v
+        //   | Error e -> e.ToString()
         | _ -> "No checksum"
     { result with Checksum = checksum }
