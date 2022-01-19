@@ -3,6 +3,7 @@ module FileIO
 open System
 open System.IO
 open Domain
+open Util
 
 let getAllFilesInDirectory srcPath =
     if not <| Directory.Exists(srcPath) then
@@ -25,7 +26,6 @@ let rec directoryCopy srcPath dstPath prefixForFileName copySubDirs  =
     let srcDir = new DirectoryInfo(srcPath)
 
     for file in srcDir.GetFiles() do
-        // let (fName, _) = Input.getFileNameAndFormat (file.Name)
         let fileNameWithPrefix = sprintf "%s-%s" prefixForFileName file.Name
         let temppath = Path.Combine(dstPath, fileNameWithPrefix)
         file.CopyTo(temppath, true) |> ignore
@@ -43,7 +43,7 @@ let getChecksumInfoFromChecksumArray (checksums: string []) =
         ) 
     let checksum = 
         checksumStr
-        |> Input.getChecksum
+        |> getChecksum
     (checksum, checksumStr)
 
 let getFileNameWithFormat (file: File) =
@@ -159,43 +159,47 @@ let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: 
     )
     // |> ignore
 
-let getTreePath (basePath: string, targetDirectory: string) (commitChecksum: string) = 
+let getFilePathInfo (fileName: string) (basePath: string, targetDirectory: string) (checksum: string) = 
     let targetDirectoryWithBasePath = getFullPathWithBasePath basePath targetDirectory
-    let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum commitChecksum
-    let targetFileName = getChecksumFileName checksumFileName "tree"
+    let (checksumDirectory, _, checksumFileName) = getPathInfoFromChecksum checksum
+    let targetFileName = getChecksumFileName checksumFileName fileName
     let targetDir = Path.Combine(targetDirectoryWithBasePath, checksumDirectory)
     let targetPath = Path.Combine(targetDir, targetFileName)
     (targetPath, targetDir)
 
-let createTreeFile (basePath: string, targetDirectory: string) (commitChecksums: string []) = 
-    let currentTimeStamp = DateTime.UtcNow.ToString()
-    let currentUser = Environment.UserName
+let getTreePath = getFilePathInfo "tree"
+let getInputConfigPath (fileNameWithFormat: string) = getFilePathInfo fileNameWithFormat
 
-    let (checksum, checksumStr) = getChecksumInfoFromChecksumArray commitChecksums
-
-    // Get the tree path info
-    let (targetPath, targetDir) = getTreePath (basePath, targetDirectory) checksum
-
-    // Create the directory for the tree
+let createFile (content: string, fileNameWithFormat: string, fileType: string, checksum: string) (basePath: string, targetDirectory: string)= 
+    // Get the  file path info
+    let (targetPath, targetDir) = getInputConfigPath fileNameWithFormat (basePath, targetDirectory) checksum
+    // Create the directory for the ifile
     createDirectoryIfNotExist targetDir
 
-    let commit = getChecksumFileName checksum "tree"
-    let treeContent = 
-        sprintf "commit %s\nAuthor: %s\nDate: %s\nRelated files: \n%s" commit currentUser currentTimeStamp checksumStr
-    
     if not <| checkIfFileExist targetPath then
         try
-            // createDirectoryIfNotExist targetWithBasePath
             let fs = IO.File.Create targetPath
-            let info = Text.UTF8Encoding(true).GetBytes(treeContent)
+            let info = Text.UTF8Encoding(true).GetBytes(content)
             fs.Write(info, 0, info.Length)
-            printfn "New Tree Content Created." 
+            printfn "New %s file Created at %s." fileType targetPath 
             fs.Close()
         with 
         ex -> 
-            printfn "Tree Content No Created with Error: %s" ex.Message
+            printfn "%s file Content Not Created with Error: %s" fileType ex.Message
     else 
         printfn "TargetPath (%s) already exists" targetPath
+
+let createTreeFile (checksumStr: string) (checksum: string) = 
+    
+    let currentTimeStamp = DateTime.UtcNow.ToString()
+    let currentUser = Environment.UserName
+    let commit = getChecksumFileName checksum "tree"
+    let treeContent = 
+        sprintf "commit %s\nAuthor: %s\nDate: %s\nRelated files: \n%s" commit currentUser currentTimeStamp checksumStr
+    let fileNameWithFormat = "tree"
+    let fileType = "Tree"
+
+    createFile (treeContent, fileNameWithFormat, fileType, checksum)
 
 // The logic is filename with sha1-checksum meaning existed
 let isOutputFileExisted (fileName: string) =
@@ -290,7 +294,7 @@ let getOutputTargetPathWithChecksumDir (path: string,  checksum: string) =
     dstPath
 
 let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: string) (inputFiles: Node list, inputTargetDir: string) (outputFiles: Node list, outputTargetDir: string) =
-    let currentTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.sssZ")
+    let currentTimeStamp = DateTime.Now.ToString("yyyyMMddHHmm")
 
     // Create Cal Dir
     createSimulationDirectoryIfNotExist (checksum) (caseTitle) (basePath) (currentTimeStamp)
@@ -324,9 +328,9 @@ let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: str
             System.IO.File.CreateSymbolicLink(symbolicLinkPath, fileFullPath) |> ignore
     )
 
-let updateTreeRelatedFiles (basePath: string, targetDirectory: string) (files: Node list) (commitChecksum: string) = 
+let updateTreeRelatedFiles (files: Node list) (basePath: string, targetDirectory: string) (commitChecksum: string) = 
     // Get the tree path info
-    let (targetPath, targetDir) = getTreePath (basePath, targetDirectory) commitChecksum
+    let (targetPath, targetDir) = getTreePath (basePath, targetDirectory) commitChecksum 
 
     // Append the files name to related files
     let commitChecksums = files |> getChecksumListArrayFromNodes
@@ -345,3 +349,17 @@ let updateTreeRelatedFiles (basePath: string, targetDirectory: string) (files: N
     else 
         printfn "TargetPath (%s) does not exists, did not update the content." targetPath
 
+let createTreeFile (checksumStr: string) (checksum: string) = 
+    
+    let currentTimeStamp = DateTime.UtcNow.ToString()
+    let currentUser = Environment.UserName
+    let commit = getChecksumFileName checksum "tree"
+    let treeContent = 
+        sprintf "commit %s\nAuthor: %s\nDate: %s\nRelated files: \n%s" commit currentUser currentTimeStamp checksumStr
+    let fileNameWithFormat = "tree"
+    let fileType = "Tree"
+
+    createFile (treeContent, fileNameWithFormat, fileType, checksum)
+
+let createInputConfigFile = createFile 
+    

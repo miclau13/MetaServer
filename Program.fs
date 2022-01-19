@@ -110,7 +110,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     Neo4j.deleteAllNodes()
 
                 // First, parse the input config file to get the directory of input
-                let IOInput = Input.findIOInput nodes
+                let IOInput = Input.pickIOInput nodes
                 let inputDirectory = Input.getIOInputDirectory IOInput
                 // Next, get the input files 
                 let inputFilesWithType = Input.findExistingInputFilesWithType inputDirectory nodes
@@ -138,12 +138,33 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 inputFiles
                 |> filterOutExistedFiles (basePath, outputDirectory) 
                 |> copyInputFiles (basePath, inputSourceDirectory, outputDirectory) 
-                
-                let commitsChecksum = inputFiles |> Domain.getChecksumListArrayFromNodes
-                // Side effect: create the tree file
-                createTreeFile (basePath, outputDirectory) commitsChecksum
 
                 // End of dealing with input
+
+                // Start dealing with converting input config file
+                let inputFilesToBeConverted = Input.getInputFilesToBeConverted inputFiles
+                let inputDirToBeConverted = Input.convertConfigFileIOText inputDirectory "./"
+                let inputConfigFileOutputDirectory = Input.getIOOutputDirectory IOInput
+                let outputDirToBeConverted = Input.convertConfigFileIOText inputConfigFileOutputDirectory "./output/"
+                let inputFilesAndIODirToBeConverted = inputFilesToBeConverted@[inputDirToBeConverted ; outputDirToBeConverted]
+                let convertedConfigText = Input.convertConfigFileText configContent inputFilesAndIODirToBeConverted
+                let inputConfigChecksum = Util.getChecksum convertedConfigText
+                createInputConfigFile (convertedConfigText, configArgs, "Input Config", inputConfigChecksum) (basePath, outputDirectory) 
+                // Done with input config file
+
+                // Start dealing with tree file
+                let commitsChecksum = inputFiles |> Domain.getChecksumListArrayFromNodes
+                let (_, checksumStr) = getChecksumInfoFromChecksumArray commitsChecksum
+                // Side effect: create the tree file
+                createTreeFile checksumStr inputConfigChecksum (basePath, outputDirectory)
+                // Done with tree file
+
+                // Sha checksum the whole input list
+                let nodesChecksum = Domain.getChecksumListArrayFromNodes inputFiles
+                let (inputListChecksum, _) = FileIO.getChecksumInfoFromChecksumArray nodesChecksum
+                let inputConfigFileNode = Domain.Simulation { Checksum = Domain.Checksum inputListChecksum }
+                // Side effect: Create the relationship node in DB
+                Neo4j.createSingleNodeIfNotExist inputConfigFileNode
 
                 // Start dealing with output
                 // Get the target path by tree checksum
@@ -168,7 +189,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 Neo4j.relateMultipleNodes outputRelationshipInfos
 
                 // Side effect: append the tree file with the output files
-                updateTreeRelatedFiles (basePath, outputDirectory) outputFileNodes inputListChecksum
+                updateTreeRelatedFiles outputFileNodes (basePath, outputDirectory) inputListChecksum
 
                 // End of dealing with output
                 
@@ -188,6 +209,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let errorMessage = sprintf "E: %A" e
                 printfn "E: %A" errorMessage
                 failwith "Input parsing failed"
+            // Ok ()
         with 
             ex -> 
                 printfn "%s" ex.Message

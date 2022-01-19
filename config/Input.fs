@@ -7,6 +7,7 @@ open Util
 open IOInput
 open OBCInput
 open RiverInput
+open Util
 type RawInput =
     { RawString : string }
 
@@ -24,6 +25,12 @@ type Input =
   | WaveInput of Dto.WaveInputDto
   | WindInput of Dto.WindInputDto
   | RawInput of RawInput
+
+type InputConfigReplacement = {
+  input: string
+  replacement: string
+}
+
 
 let getFileNameAndFormat (f: string) = 
   let name = (f.Split [|'.'|]).[0]
@@ -68,20 +75,16 @@ let getInputFileResult (file: string) (inputDirectory: string) (fileType: string
       None
   | _ -> None
 
-
-let getChecksum (str: string) = 
-  let bytes = 
-    System.Text.Encoding.UTF8.GetBytes str
-    |> SHA1.Create().ComputeHash
-  let result = bytes |> Array.fold (fun acc b -> acc + b.ToString("X2")) ""
-  result
+let getFilePropertyRegex (property: string) = 
+  sprintf "(.*?%s)(\s*=\s*'*)([^',]*)('*\s*)(,?)" property
 
 let getProperty (str: string) (property: string) =
-    let regex = sprintf ".*?%s(?:\s*=\s*'*)([^',]*)(?:'*\s*)," property
+    let regex = getFilePropertyRegex property
     match str with
-    | Util.RegexGroup regex 1 str ->
-          // printfn "property: %s str:%s" property str
-          str
+    // Since the regex for file is specified
+    // So the index of the capturing group must be 3 unless regex is changed
+    | Util.RegexGroup regex 3 str ->
+      str
     | _ -> "Something else"
 
 // For output files 
@@ -377,20 +380,20 @@ let parserResultToDomain (result: list<string>) =
     ) Array.empty
     // |> printfn "parserResultToDomain result:%A" 
 
-let findIOInput (nodes: Node list) = 
-  List.find (
+let pickIOInput (nodes: Node list) = 
+  List.pick (
       function 
-      | Domain.IOInput _ -> true
-      | _ -> false
+      | Domain.IOInput i -> Some i
+      | _ -> None
   ) nodes
 
-let getIOInputDirectory (node: Node) = 
-    node 
-    |> function 
-        | Domain.IOInput n -> 
-            let (InputDirectory dir) = n.InputDirectory
-            dir
-        | _ -> ""
+let getIOInputDirectory (input: IOInput) = 
+    let (InputDirectory dir) = input.InputDirectory 
+    dir
+
+let getIOOutputDirectory (input: IOInput) = 
+    let (OutputDirectory dir) = input.OutputDirectory 
+    dir
 
 let getFileResult (inputDirectory: string) (node: Node)  = 
     match node with 
@@ -435,3 +438,26 @@ let findExistingInputFilesWithType (inputDirectory: string) (inputs: Node list) 
       let files = List.map (getFileResult inputDirectory) inputs
       let inputFilesWithType = files |> List.filter (Option.isSome) |> List.map (Option.get)
       inputFilesWithType
+
+let getInputFilesToBeConverted (inputFiles: Domain.Node list) = 
+    inputFiles
+    |> List.choose (fun node -> match node with | Domain.File file -> Some file | _ -> None)
+    |> List.map (
+        fun file -> 
+            let fileNameWithFormat = FileIO.getFileNameWithFormat file
+            let (Domain.Checksum checksum) = file.Checksum
+            let replacementFileName = FileIO.getChecksumFileName checksum fileNameWithFormat
+            { input = fileNameWithFormat ; replacement = replacementFileName }
+    )
+  
+let convertConfigFileText (inputConfigText: string) (filesReplacement: InputConfigReplacement list) = 
+  let convertedConfigText =
+    filesReplacement
+    |> List.fold (
+      fun acc inputConfigReplacement -> 
+        acc |> Util.stringReplacement inputConfigReplacement.input inputConfigReplacement.replacement
+    ) inputConfigText
+  convertedConfigText
+
+let convertConfigFileIOText (dir: string) (replacement: string) =
+  { input = dir ; replacement = replacement }
