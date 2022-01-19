@@ -119,6 +119,8 @@ type RelationshipDto =
   | HasInputDTO of HasInputDTO
   | FileLocationIsDTO of FileLocationIsDTO
   | HasOutputDTO 
+  | HasInputConfigDTO 
+  | HasTreeDTO 
 
 /// Define a type to represent possible errors
 type DtoError =

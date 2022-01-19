@@ -101,6 +101,8 @@ let getRelationshipAttributes (relationship: RelationshipDto) =
         | HasInputDTO v -> sprintf "{ Type: '%s' }" v.Type
         | FileLocationIsDTO v -> sprintf "{ BasicPath: '%s' }" v.BasicPath
         | HasOutputDTO -> sprintf "{ }"
+        | HasTreeDTO -> sprintf "{ }"
+        | HasInputConfigDTO -> sprintf "{ }"
 
 let getRelationships (relationship: string, relationshipProperty: string option, relationshipPropertyValue: string option) =
     // let queryMatchTo = sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship relationshipProperty relationshipPropertyValue

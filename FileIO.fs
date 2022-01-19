@@ -189,15 +189,13 @@ let createFile (content: string, fileNameWithFormat: string, fileType: string, c
     else 
         printfn "TargetPath (%s) already exists" targetPath
 
-let createTreeFile (checksumStr: string) (checksum: string) = 
+let createTreeFile (checksumStr: string) (fileNameWithFormat: string, fileType: string, checksum: string) = 
     
     let currentTimeStamp = DateTime.UtcNow.ToString()
     let currentUser = Environment.UserName
     let commit = getChecksumFileName checksum "tree"
     let treeContent = 
         sprintf "commit %s\nAuthor: %s\nDate: %s\nRelated files: \n%s" commit currentUser currentTimeStamp checksumStr
-    let fileNameWithFormat = "tree"
-    let fileType = "Tree"
 
     createFile (treeContent, fileNameWithFormat, fileType, checksum)
 
@@ -348,18 +346,6 @@ let updateTreeRelatedFiles (files: Node list) (basePath: string, targetDirectory
                 printfn "Tree Content did not updated, with Error: %s" ex.Message
     else 
         printfn "TargetPath (%s) does not exists, did not update the content." targetPath
-
-let createTreeFile (checksumStr: string) (checksum: string) = 
-    
-    let currentTimeStamp = DateTime.UtcNow.ToString()
-    let currentUser = Environment.UserName
-    let commit = getChecksumFileName checksum "tree"
-    let treeContent = 
-        sprintf "commit %s\nAuthor: %s\nDate: %s\nRelated files: \n%s" commit currentUser currentTimeStamp checksumStr
-    let fileNameWithFormat = "tree"
-    let fileType = "Tree"
-
-    createFile (treeContent, fileNameWithFormat, fileType, checksum)
 
 let createInputConfigFile = createFile 
     

@@ -2,6 +2,7 @@ module Input
 
 open System.Security.Cryptography
 open System
+open System.IO
 open Domain
 open Util
 open IOInput
@@ -31,14 +32,12 @@ type InputConfigReplacement = {
   replacement: string
 }
 
-
 let getFileNameAndFormat (f: string) = 
   let name = (f.Split [|'.'|]).[0]
   let format = (f.Split [|'.'|]).[1]
   (name, format)
 
 let getChecksumFromFile (path: string) =
-
   if IO.File.Exists(path) then
     if (IO.FileInfo(path)).Length <> 0L then
       let content = IO.File.ReadAllBytes(path)
@@ -49,19 +48,19 @@ let getChecksumFromFile (path: string) =
   else
     sprintf "File %s does not exist." path
 
-let getInputFileResult (file: string) (inputDirectory: string) (fileType: string) = 
-  match file with
+let getInputFileResult (fileName: string) (inputDirectory: string) (fileType: string) = 
+  match fileName with
   | Util.RegexGroup "\." 0 _ ->
-    let name = (file.Split [|'.'|]).[0]
-    let format = (file.Split [|'.'|]).[1]
-    let fileLocation = sprintf "%s%s" inputDirectory file
-    if (IO.File.Exists fileLocation) then
+    let (name, format) = getFileNameAndFormat fileName
+    let fileLocation = Path.Combine(inputDirectory, fileName)
+    printfn "getInputFileResult fileLocation: %s" fileLocation
+    printfn "getInputFileResult FileIO.checkIfFileExist fileLocation: %A" (FileIO.checkIfFileExist fileLocation)
+    if (FileIO.checkIfFileExist fileLocation) then
       let checksum = 
         // If input is in nc format, check if it has checksum in its file name
         // If yes then use the checksum directly, otherwise generate checksum 
         match name with 
         | Util.RegexGroup "(\w{40}-)(.*)" 0 name  -> 
-          printfn "inputFileResult name %s" name
           name
         | _ -> getChecksumFromFile fileLocation
       let result = File {

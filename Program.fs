@@ -118,22 +118,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // Side effect: Create the files node in DB
                 Neo4j.createMultipleNodesIfNotExist inputFiles
 
-                // Sha checksum the whole input list
-                let nodesChecksum = Domain.getChecksumListArrayFromNodes inputFiles
-                let (inputListChecksum, _) = FileIO.getChecksumInfoFromChecksumArray nodesChecksum
-                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputListChecksum }
-                // Side effect: Create the relationship node in DB
-                Neo4j.createSingleNodeIfNotExist simulationNode
-
-                // Side effect: Relate the file nodes with simulation
-                let inputRelationshipInfos: Neo4j.RelationShipInfo list = 
-                    List.map (
-                        fun (inputFile, relationship) -> 
-                            let relationshipProps = Some (Dto.HasInputDTO ({ Type = relationship }))
-                            { SourceNode = simulationNode ; TargetNode = inputFile ; Relationship = "HAS_INPUT" ; RelationshipProps = relationshipProps }
-                    ) inputFilesWithType
-
-                Neo4j.relateMultipleNodes inputRelationshipInfos
                 // Side effect: copy input files
                 inputFiles
                 |> filterOutExistedFiles (basePath, outputDirectory) 
@@ -149,31 +133,68 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let inputFilesAndIODirToBeConverted = inputFilesToBeConverted@[inputDirToBeConverted ; outputDirToBeConverted]
                 let convertedConfigText = Input.convertConfigFileText configContent inputFilesAndIODirToBeConverted
                 let inputConfigChecksum = Util.getChecksum convertedConfigText
-                createInputConfigFile (convertedConfigText, configArgs, "Input Config", inputConfigChecksum) (basePath, outputDirectory) 
+                let inputConfigFileType = "Input Config"
+                createInputConfigFile (convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) (basePath, outputDirectory)
+                
+                let (_, inputConfigFileTargetDir) = getInputConfigPath configArgs (basePath, outputDirectory) inputConfigChecksum
+                let inputConfigFileNameWithChecksum = getChecksumFileName inputConfigChecksum configArgs
+                let inputConfigFileNode = 
+                    Input.getInputFileResult inputConfigFileNameWithChecksum inputConfigFileTargetDir inputConfigFileType
+                    |> Option.get
+                    |> fst
+
+                // Side effect: Create the input config file node in DB
+                Neo4j.createSingleNodeIfNotExist inputConfigFileNode
+
+                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
+                // Side effect: Create the relationship node in DB
+                Neo4j.createSingleNodeIfNotExist simulationNode
+
+                // Side effect: Relate the file nodes with simulation
+                let inputRelationshipInfos: Neo4j.RelationShipInfo list = 
+                    List.map (
+                        fun (inputFile, relationship) -> 
+                            let relationshipProps = Some (Dto.HasInputDTO ({ Type = relationship }))
+                            { SourceNode = simulationNode ; TargetNode = inputFile ; Relationship = "HAS_INPUT" ; RelationshipProps = relationshipProps }
+                    ) inputFilesWithType
+
+                // let inputConfigFileRelationshipProps = Some (Dto.HasInputDTO ({ Type = inputConfigFileType }))
+                let inputConfigFileRelationshipInfo: Neo4j.RelationShipInfo = 
+                    { SourceNode = simulationNode ; TargetNode = inputConfigFileNode ; Relationship = "HAS_INPUT_CONFIG" ; RelationshipProps = None }
+
                 // Done with input config file
 
                 // Start dealing with tree file
                 let commitsChecksum = inputFiles |> Domain.getChecksumListArrayFromNodes
                 let (_, checksumStr) = getChecksumInfoFromChecksumArray commitsChecksum
+                let treeFileType = "Tree"
+                let treeFileNameWithFormat = "tree.txt"
                 // Side effect: create the tree file
-                createTreeFile checksumStr inputConfigChecksum (basePath, outputDirectory)
-                // Done with tree file
+                createTreeFile checksumStr (treeFileNameWithFormat, treeFileType, inputConfigChecksum) (basePath, outputDirectory)
 
-                // Sha checksum the whole input list
-                let nodesChecksum = Domain.getChecksumListArrayFromNodes inputFiles
-                let (inputListChecksum, _) = FileIO.getChecksumInfoFromChecksumArray nodesChecksum
-                let inputConfigFileNode = Domain.Simulation { Checksum = Domain.Checksum inputListChecksum }
-                // Side effect: Create the relationship node in DB
-                Neo4j.createSingleNodeIfNotExist inputConfigFileNode
+                let (_, treeFileTargetDir) = getTreePath (basePath, outputDirectory) inputConfigChecksum
+                let treeFileNameWithChecksum = getChecksumFileName inputConfigChecksum treeFileNameWithFormat
+                let treeFileNode = 
+                    Input.getInputFileResult treeFileNameWithChecksum treeFileTargetDir treeFileType
+                    |> Option.get
+                    |> fst
+
+                // Side effect: Create the tree file node in DB
+                Neo4j.createSingleNodeIfNotExist treeFileNode
+
+                // let treeFileRelationshipProps = Some (Dto.HasInputDTO ({ Type = inputConfigFileType }))
+                let treeFileRelationshipInfo: Neo4j.RelationShipInfo = 
+                    { SourceNode = simulationNode ; TargetNode = treeFileNode ; Relationship = "HAS_TREE" ; RelationshipProps = None }
+                // Done with tree file
 
                 // Start dealing with output
                 // Get the target path by tree checksum
-                let outputTargetPath = getOutputTargetPath (basePath, outputDirectory) inputListChecksum
-                let dstPath = getOutputTargetPathWithChecksumDir (outputTargetPath, inputListChecksum) 
+                let outputTargetPath = getOutputTargetPath (basePath, outputDirectory) inputConfigChecksum
+                let dstPath = getOutputTargetPathWithChecksumDir (outputTargetPath, inputConfigChecksum) 
                 // Get the source output data path 
                 let srcPath = getFullPathWithBasePath basePath outputSourceDirectory
                 // Side effect: copy output data to the target path
-                directoryCopy srcPath dstPath inputListChecksum false
+                directoryCopy srcPath dstPath inputConfigChecksum false
 
                 // Get the source output data path 
                 let outputFiles = getAllFilesInDirectory dstPath
@@ -186,12 +207,15 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         fun file -> 
                             { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
                     ) outputFileNodes
-                Neo4j.relateMultipleNodes outputRelationshipInfos
 
                 // Side effect: append the tree file with the output files
-                updateTreeRelatedFiles outputFileNodes (basePath, outputDirectory) inputListChecksum
+                updateTreeRelatedFiles outputFileNodes (basePath, outputDirectory) inputConfigChecksum
 
                 // End of dealing with output
+
+                // Relate all the nodes with simulation
+                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
+                Neo4j.relateMultipleNodes relationshipList
                 
                 // Start creating directory for the calculation
 
@@ -202,7 +226,9 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
 
-                createSimulationFolder inputListChecksum caseTitle basePath (inputFiles, outputDirectory) (outputFileNodes, outputTargetPath)
+                let simulationInputFiles = inputConfigFileNode::inputFiles
+                createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, outputDirectory) (outputFileNodes, outputTargetPath)
+                
                 // End of creating directory for the calculation
                 Ok ()
             | Error e -> 
