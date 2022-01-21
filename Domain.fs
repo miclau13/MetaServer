@@ -115,14 +115,14 @@ type File = {
 
 // Input from Config
 type AirPressureInput = {
-  Checksum: Checksum
-  Kind: InputKind
+  ConfigType: InputType
   File: InputFile
+  Kind: InputKind
 }
 
 type FVCOMInput = {
-  Checksum: Checksum
   CaseTitle: FVCOMInput.CaseTitle
+  ConfigType: InputType
   DateFormat: FVCOMInput.DateFormat
   EndDate: FVCOMInput.EndDate
   StartDate: FVCOMInput.StartDate
@@ -130,62 +130,72 @@ type FVCOMInput = {
 }
 
 type GridCoordinatesInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   File: InputFile
   FileUnits: GridCoordinatesInput.FileUnits
 }
 
 type HeatingInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   File: InputFile
   Type: InputType
 }
 
 type IOInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   InputDirectory: IOInput.InputDirectory
   OutputDirectory: IOInput.OutputDirectory
 }
 
 type NetCDFInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   FirstOut: NetCDFInput.FirstOut
   OutInterval: NetCDFInput.OutInterval
   OutputStack: NetCDFInput.OutputStack
 }
 
-type OBCInput = {
-  Checksum: Checksum
-  NodeListFile: OBCInput.NodeListFile
-  ElevationFile: OBCInput.ElevationFile
+type OBCElevationInput = {
+  ConfigType: InputType
+  ElevationFile: OBCElevationInput.ElevationFile
+}
+type OBCNodeListInput = {
+  ConfigType: InputType
+  NodeListFile: OBCNodeListInput.NodeListFile
+}
+
+
+type PrecipitationInput = {
+  ConfigType: InputType
+  File: InputFile
+  Kind: InputKind
 }
 
 type RiverInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   InfoFile: RiverInput.InfoFile
   Number: RiverInput.Number
   Kind: InputKind
 }
 
 type StartupInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   File: InputFile
   Type: InputType
 }
 
 type StartupXInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   File: InputFile
   Type: InputType
 }
 
 type WaveInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   File: InputFile
   Kind: InputKind
 }
 type WindInput = {
-  Checksum: Checksum
+  ConfigType: InputType
   File: InputFile
   Type: InputType
 }
@@ -200,7 +210,9 @@ type Node =
   | HeatingInput of HeatingInput
   | IOInput of IOInput
   | NetCDFInput of NetCDFInput
-  | OBCInput of OBCInput
+  | OBCElevationInput of OBCElevationInput
+  | OBCNodeListInput of OBCNodeListInput
+  | PrecipitationInput of PrecipitationInput
   | RiverInput of RiverInput
   | StartupInput of StartupInput
   | StartupXInput of StartupXInput
@@ -223,3 +235,8 @@ let getChecksumListArrayFromNodes (nodes: list<Node>)=
   )
   |> Array.filter Option.isSome
   |> Array.map Option.get
+
+let getFileName (file: File) =
+    let (Name fileName) = file.Name
+    let (Format fileFormat) = file.Format
+    sprintf "%s.%s" fileName fileFormat

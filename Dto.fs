@@ -6,8 +6,9 @@ open FVCOMInput
 open GridCoordinatesInput
 open IOInput
 open NetCDFInput
+open OBCElevationInput
+open OBCNodeListInput
 open RiverInput
-open OBCInput
 
 type Dto<'T> = {
   data: 'T
@@ -18,67 +19,78 @@ type SimulationDto = {
   Checksum: string
 }
 type AirPressureInputDto = {
-  Checksum: string
+  ConfigType: string
   File: string
   Kind: string
 }
 type FVCOMInputDto = {
   CaseTitle: String
-  Checksum: string
+  ConfigType: string
   DateFormat: string
   EndDate: string
   StartDate: string
   TimeZone: string
 }
 type GridCoordinatesInputDto = {
-  Checksum: string
+  ConfigType: string
   File: string
   FileUnits: string
 }
 type HeatingInputDto = {
-  Checksum: string
+  ConfigType: string
   File: string
   Type: string
 }
 type IOInputDto = {
-  Checksum: string
+  ConfigType: string
   InputDirectory: string
   OutputDirectory: string
 }
 type NetCDFInputDto = {
-  Checksum: string
+  ConfigType: string
   FirstOut: string
   OutInterval: string
   OutputStack: int
 }
-type OBCInputDto = {
-  Checksum: string
-  NodeListFile: string
+type OBCElevationInputDto = {
+  ConfigType: string
   ElevationFile: string
 }
+
+type OBCNodeListInputDto = {
+  ConfigType: string
+  NodeListFile: string
+}
+
+type PrecipitationInputDto = {
+  ConfigType: string
+  File: string
+  Kind: string
+}
+
 type RiverInputDto = {
-  Checksum: string
+  ConfigType: string
   InfoFile: string
   Number: int
   Kind: string
 }
 type StartupInputDto = {
-  Checksum: string
+  ConfigType: string
   File: string
   Type: string
 }
 type StartupXInputDto = {
-  Checksum: string
+  ConfigType: string
   File: string
   Type: string
 }
 type WaveInputDto = {
-  Checksum: string
+  ConfigType: string
   File: string
   Kind: string
 }
 type WindInputDto = {
-  Checksum: string
+  ConfigType: string
   File: string
   Type: string
 }
@@ -205,11 +217,11 @@ module SimulationDto =
 module AirPressureInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.AirPressureInput) :AirPressureInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let file = input.File |> InputFile.value
     let kind = input.Kind |> InputKind.value
     let dto: AirPressureInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       File = file
       Kind = kind
     }
@@ -220,12 +232,12 @@ module AirPressureInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! file = data.File |> InputFile.create "File"
       let! kind = data.Kind |> InputKind.create "Kind"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         File = file
         Kind = kind
       }
@@ -255,14 +267,14 @@ module AirPressureInputDto =
 module FVCOMInputDto =
   /// create a DTO from a domain object
   let fromDomain (fvcomInput: Domain.FVCOMInput) :FVCOMInputDto =
-    let checksum = fvcomInput.Checksum |> Checksum.value
+    let configType = fvcomInput.ConfigType |> InputType.value
     let startDate = fvcomInput.StartDate |> StartDate.value
     let endDate = fvcomInput.EndDate |> EndDate.value
     let caseTitle = fvcomInput.CaseTitle |> CaseTitle.value
     let timezone = fvcomInput.TimeZone |> TimeZone.value
     let dateFormat = fvcomInput.DateFormat |> DateFormat.value
     let dto = { 
-      Checksum = checksum
+      ConfigType = configType
       CaseTitle = caseTitle
       DateFormat = dateFormat
       EndDate = endDate
@@ -276,7 +288,7 @@ module FVCOMInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! startDate = data.StartDate |> StartDate.create "StartDate"
       let! endDate = data.EndDate |> EndDate.create "EndDate"
       let! caseTitle = data.CaseTitle |> CaseTitle.create "CaseTitle"
@@ -284,7 +296,7 @@ module FVCOMInputDto =
       let! dateFormat = data.DateFormat |> DateFormat.create "DateFormat"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         CaseTitle = caseTitle
         DateFormat = dateFormat
         EndDate = endDate
@@ -319,11 +331,11 @@ module FVCOMInputDto =
 module GridCoordinatesInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.GridCoordinatesInput) :GridCoordinatesInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let file = input.File |> InputFile.value
     let fileUnits = input.FileUnits |> FileUnits.value
     let dto: GridCoordinatesInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       File = file
       FileUnits = fileUnits
     }
@@ -334,12 +346,12 @@ module GridCoordinatesInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! file = data.File |> InputFile.create "File"
       let! fileUnits = data.FileUnits |> FileUnits.create "FileUnits"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         File = file
         FileUnits = fileUnits
       }
@@ -370,11 +382,11 @@ module GridCoordinatesInputDto =
 module HeatingInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.HeatingInput) :HeatingInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let file = input.File |> InputFile.value
     let inputType = input.Type |> InputType.value
     let dto: HeatingInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       File = file
       Type = inputType
     }
@@ -385,12 +397,12 @@ module HeatingInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! file = data.File |> InputFile.create "File"
       let! inputType = data.Type |> InputType.create "Type"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         File = file
         Type = inputType
       }
@@ -421,11 +433,11 @@ module HeatingInputDto =
 module IOInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.IOInput) :IOInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let inputDirectory = input.InputDirectory |> InputDirectory.value
     let outputDirectory = input.OutputDirectory |> OutputDirectory.value
     let dto: IOInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       InputDirectory = inputDirectory
       OutputDirectory = outputDirectory
     }
@@ -436,12 +448,12 @@ module IOInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! inputDirectory = data.InputDirectory |> InputDirectory.create "InputDirectory"
       let! outputDirectory = data.OutputDirectory |> OutputDirectory.create "OutputDirectory"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         InputDirectory = inputDirectory
         OutputDirectory = outputDirectory
       }
@@ -473,12 +485,12 @@ module IOInputDto =
 module NetCDFInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.NetCDFInput) :NetCDFInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let firstOut = input.FirstOut |> FirstOut.value
     let outInterval = input.OutInterval |> OutInterval.value
     let outputStack = input.OutputStack |> OutputStack.value
     let dto: NetCDFInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       FirstOut = firstOut
       OutInterval = outInterval
       OutputStack = outputStack
@@ -490,13 +502,13 @@ module NetCDFInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! firstOut = data.FirstOut |> FirstOut.create "FirstOut"
       let! outInterval = data.OutInterval |> OutInterval.create "OutInterval"
       let! outputStack = data.OutputStack |> OutputStack.create "OutInterval"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         FirstOut = firstOut
         OutInterval = outInterval
         OutputStack = outputStack
@@ -525,47 +537,141 @@ module NetCDFInputDto =
       return domainValue
   }
 
-module OBCInputDto =
+module OBCElevationInputDto =
   /// create a DTO from a domain object
-  let fromDomain (input: Domain.OBCInput) :OBCInputDto =
-    let checksum = input.Checksum |> Checksum.value
+  let fromDomain (input: Domain.OBCElevationInput) :OBCElevationInputDto =
+    let configType = input.ConfigType |> InputType.value
     let elevationFile = input.ElevationFile |> ElevationFile.value
-    let nodeListFile = input.NodeListFile |> NodeListFile.value
-    let dto: OBCInputDto = {
-      Checksum = checksum
+    let dto: OBCElevationInputDto = {
+      ConfigType = configType
       ElevationFile = elevationFile
+    }
+    dto
+
+  /// create a domain object from a DTO
+  let toDomain (dto: Dto<OBCElevationInputDto>) :Result<Domain.OBCElevationInput,string> =
+    let data = dto |> fromDto
+    result {
+      // get each (validated) simple type from the DTO as a success or failure
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
+      let! elevationFile = data.ElevationFile |> ElevationFile.create "ElevationFile"
+      // combine the components to create the domain object
+      return {
+        ConfigType = configType
+        ElevationFile = elevationFile
+      }
+    }
+
+  // Serialize the OBCElevationInput into a JSON string
+  let jsonFromDomain (input: Domain.OBCElevationInput) =
+      input
+      |> fromDomain
+      |> Json.serialize
+
+  /// Deserialize a JSON string into a OBCElevationInput
+  let jsonToDomain jsonString :Result<Domain.OBCElevationInput, DtoError> =
+    result {
+      let! deserializedValue =
+          jsonString
+          |> Json.deserialize<Dto<OBCElevationInputDto>>
+          |> Result.mapError DeserializationException
+
+      let! domainValue =
+          deserializedValue
+          |> toDomain
+          |> Result.mapError ValidationError
+
+      return domainValue
+  }
+
+module OBCNodeListInputDto =
+  /// create a DTO from a domain object
+  let fromDomain (input: Domain.OBCNodeListInput) :OBCNodeListInputDto =
+    let configType = input.ConfigType |> InputType.value
+    let nodeListFile = input.NodeListFile |> NodeListFile.value
+    let dto: OBCNodeListInputDto = {
+      ConfigType = configType
       NodeListFile = nodeListFile
     }
     dto
 
   /// create a domain object from a DTO
-  let toDomain (dto: Dto<OBCInputDto>) :Result<Domain.OBCInput,string> =
+  let toDomain (dto: Dto<OBCNodeListInputDto>) :Result<Domain.OBCNodeListInput,string> =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
-      let! elevationFile = data.ElevationFile |> ElevationFile.create "ElevationFile"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! nodeListFile = data.NodeListFile |> NodeListFile.create "NodeListFile"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
-        ElevationFile = elevationFile
+        ConfigType = configType
         NodeListFile = nodeListFile
       }
     }
 
-  // Serialize the OBCInput into a JSON string
-  let jsonFromDomain (input: Domain.OBCInput) =
+  // Serialize the OBCNodeListInput into a JSON string
+  let jsonFromDomain (input: Domain.OBCNodeListInput) =
       input
       |> fromDomain
       |> Json.serialize
 
-  /// Deserialize a JSON string into a OBCInput
-  let jsonToDomain jsonString :Result<Domain.OBCInput, DtoError> =
+  /// Deserialize a JSON string into a OBCNodeListInput
+  let jsonToDomain jsonString :Result<Domain.OBCNodeListInput, DtoError> =
     result {
       let! deserializedValue =
           jsonString
-          |> Json.deserialize<Dto<OBCInputDto>>
+          |> Json.deserialize<Dto<OBCNodeListInputDto>>
+          |> Result.mapError DeserializationException
+
+      let! domainValue =
+          deserializedValue
+          |> toDomain
+          |> Result.mapError ValidationError
+
+      return domainValue
+  }
+
+module PrecipitationInputDto =
+  /// create a DTO from a domain object
+  let fromDomain (input: Domain.PrecipitationInput) :PrecipitationInputDto =
+    let configType = input.ConfigType |> InputType.value
+    let file = input.File |> InputFile.value
+    let fileKind = input.Kind |> InputKind.value
+    let dto: PrecipitationInputDto = {
+      ConfigType = configType
+      File = file
+      Kind = fileKind
+    }
+    dto
+
+  /// create a domain object from a DTO
+  let toDomain (dto: Dto<PrecipitationInputDto>) :Result<Domain.PrecipitationInput,string> =
+    let data = dto |> fromDto
+    result {
+      // get each (validated) simple type from the DTO as a success or failure
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
+      let! file = data.File |> InputFile.create "File"
+      let! fileKind = data.Kind |> InputKind.create "Kind"
+      // combine the components to create the domain object
+      return {
+        ConfigType = configType
+        File = file
+        Kind = fileKind
+      }
+    }
+
+  // Serialize the PrecipitationInput into a JSON string
+  let jsonFromDomain (input: Domain.PrecipitationInput) =
+      input
+      |> fromDomain
+      |> Json.serialize
+
+  /// Deserialize a JSON string into a PrecipitationInput
+  let jsonToDomain jsonString :Result<Domain.PrecipitationInput, DtoError> =
+    result {
+      let! deserializedValue =
+          jsonString
+          |> Json.deserialize<Dto<PrecipitationInputDto>>
           |> Result.mapError DeserializationException
 
       let! domainValue =
@@ -579,12 +685,12 @@ module OBCInputDto =
 module RiverInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.RiverInput) :RiverInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let file = input.InfoFile |> InfoFile.value
     let number = input.Number |> Number.value
     let inputKind = input.Kind |> InputKind.value
     let dto: RiverInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       InfoFile = file
       Number = number
       Kind = inputKind
@@ -596,13 +702,13 @@ module RiverInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! file = data.InfoFile |> InfoFile.create "InfoFile"
       let! number = data.Number |> Number.create "Number"
       let! inputKind = data.Kind |> InputKind.create "Kind"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         InfoFile = file
         Number = number
         Kind = inputKind
@@ -634,11 +740,11 @@ module RiverInputDto =
 module StartupInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.StartupInput) :StartupInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let file = input.File |> InputFile.value
     let inputType = input.Type |> InputType.value
     let dto: StartupInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       File = file
       Type = inputType
     }
@@ -649,12 +755,12 @@ module StartupInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! file = data.File |> InputFile.create "File"
       let! inputType = data.Type |> InputType.create "Type"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         File = file
         Type = inputType
       }
@@ -685,11 +791,11 @@ module StartupInputDto =
 module StartupXInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.StartupXInput) :StartupXInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let file = input.File |> InputFile.value
     let inputType = input.Type |> InputType.value
     let dto: StartupXInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       File = file
       Type = inputType
     }
@@ -700,12 +806,12 @@ module StartupXInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! file = data.File |> InputFile.create "File"
       let! inputType = data.Type |> InputType.create "Type"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         File = file
         Type = inputType
       }
@@ -736,11 +842,11 @@ module StartupXInputDto =
 module WaveInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.WaveInput) :WaveInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let file = input.File |> InputFile.value
     let startupKind = input.Kind |> InputKind.value
     let dto: WaveInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       File = file
       Kind = startupKind
     }
@@ -751,12 +857,12 @@ module WaveInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! file = data.File |> InputFile.create "File"
       let! startupKind = data.Kind |> InputKind.create "Kind"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         File = file
         Kind = startupKind
       }
@@ -787,11 +893,11 @@ module WaveInputDto =
 module WindInputDto =
   /// create a DTO from a domain object
   let fromDomain (input: Domain.WindInput) :WindInputDto =
-    let checksum = input.Checksum |> Checksum.value
+    let configType = input.ConfigType |> InputType.value
     let file = input.File |> InputFile.value
     let inputType = input.Type |> InputType.value
     let dto: WindInputDto = {
-      Checksum = checksum
+      ConfigType = configType
       File = file
       Type = inputType
     }
@@ -802,12 +908,12 @@ module WindInputDto =
     let data = dto |> fromDto
     result {
       // get each (validated) simple type from the DTO as a success or failure
-      let! checksum = data.Checksum |> Checksum.create "Checksum"
+      let! configType = data.ConfigType |> InputType.create "ConfigType"
       let! file = data.File |> InputFile.create "File"
       let! inputType = data.Type |> InputType.create "Type"
       // combine the components to create the domain object
       return {
-        Checksum = checksum
+        ConfigType = configType
         File = file
         Type = inputType
       }

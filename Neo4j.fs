@@ -45,7 +45,9 @@ let getNodeLabel (node: Node) =
         | HeatingInput _ -> nameof HeatingInput
         | IOInput _ -> nameof IOInput
         | NetCDFInput _ -> nameof NetCDFInput
-        | OBCInput _ -> nameof OBCInput
+        | OBCElevationInput _ -> nameof OBCElevationInput
+        | OBCNodeListInput _ -> nameof OBCNodeListInput
+        | PrecipitationInput _ -> nameof PrecipitationInput
         | RiverInput _ -> nameof RiverInput
         | StartupInput _ -> nameof StartupInput
         | StartupXInput _ -> nameof StartupXInput
@@ -222,7 +224,9 @@ let getClientWithNodeInputParameter (node: Node) (paramName: string) (client: Cy
     | HeatingInput input -> client.WithParam(paramName, (HeatingInputDto.fromDomain input))
     | IOInput input -> client.WithParam(paramName, (IOInputDto.fromDomain input))
     | NetCDFInput input -> client.WithParam(paramName, (NetCDFInputDto.fromDomain input))
-    | OBCInput input -> client.WithParam(paramName, (OBCInputDto.fromDomain input))
+    | OBCElevationInput input -> client.WithParam(paramName, (OBCElevationInputDto.fromDomain input))
+    | OBCNodeListInput input -> client.WithParam(paramName, (OBCNodeListInputDto.fromDomain input))
+    | PrecipitationInput input -> client.WithParam(paramName, (PrecipitationInputDto.fromDomain input))
     | RiverInput input -> client.WithParam(paramName, (RiverInputDto.fromDomain input))
     | StartupInput input -> client.WithParam(paramName, (StartupInputDto.fromDomain input))
     | StartupXInput input -> client.WithParam(paramName, (StartupXInputDto.fromDomain input))
@@ -235,18 +239,20 @@ let getNodeAttributes (node: Node) =
         | Simulation simulation -> { Label = "Simulation"; Key = "Checksum"; KeyValue = simulation.Checksum |> Checksum.value }
         | File file -> { Label = "File"; Key = "Checksum"; KeyValue = file.Checksum |> Checksum.value }
         | Grid grid -> { Label = "Grid"; Key = "Checksum"; KeyValue = grid.Checksum |> Checksum.value }
-        | AirPressureInput input -> { Label = "AirPressureInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | FVCOMInput input -> { Label = "FVCOMInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | GridCoordinatesInput input -> { Label = "GridCoordinatesInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | HeatingInput input -> { Label = "HeatingInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | IOInput input -> { Label = "IOInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | NetCDFInput input -> { Label = "NetCDFInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | OBCInput input -> { Label = "OBCInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | RiverInput input -> { Label = "RiverInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | StartupInput input -> { Label = "StartupInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | StartupXInput input -> { Label = "StartupXInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | WaveInput input -> { Label = "WaveInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
-        | WindInput input -> { Label = "WindInput"; Key = "Checksum"; KeyValue = input.Checksum |> Checksum.value }
+        | AirPressureInput input -> { Label = "AirPressureInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | FVCOMInput input -> { Label = "FVCOMInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | GridCoordinatesInput input -> { Label = "GridCoordinatesInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | HeatingInput input -> { Label = "HeatingInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | IOInput input -> { Label = "IOInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | NetCDFInput input -> { Label = "NetCDFInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | OBCElevationInput input -> { Label = "OBCElevationInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | OBCNodeListInput input -> { Label = "OBCNodeListInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | PrecipitationInput input -> { Label = "PrecipitationInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | RiverInput input -> { Label = "RiverInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | StartupInput input -> { Label = "StartupInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | StartupXInput input -> { Label = "StartupXInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | WaveInput input -> { Label = "WaveInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        | WindInput input -> { Label = "WindInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
 
 let getAllNodes () =
     let result =

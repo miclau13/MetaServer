@@ -23,3 +23,32 @@ let getChecksum (str: string) =
         |> SHA1.Create().ComputeHash
     let result = bytes |> Array.fold (fun acc b -> acc + b.ToString("X2")) ""
     result
+
+let getChecksumInfoFromChecksumArray (checksums: string []) = 
+    let checksumStr = 
+        checksums 
+        |> Array.reduce (fun acc item -> 
+            sprintf "%s\n%s" acc item
+        ) 
+    let checksum = 
+        checksumStr
+        |> getChecksum
+    (checksum, checksumStr)
+
+let getChecksumFileName (checksum: string) (fileName: string) = 
+    match fileName with 
+    | RegexGroup "(\w{40}-)(.*)" 0 _  -> 
+        fileName
+    | _ ->  sprintf "%s-%s" checksum fileName
+
+// Modified on 12 Jan - Use one directory level only
+let getChecksumDirFromChecksum (checksum: string) = 
+    let directoryLevel1 = checksum.[0..1]
+    // let directoryLevel2 = checksum.[2..3]
+    // let fileName = checksum.[0..]
+    // let path = sprintf "/%s/" directoryLevel1 
+    // let path = directoryLevel1
+    directoryLevel1
+
+let getSimulationDirectoryPath (checksum: string, caseTitle: string, timestamp: string) = 
+    sprintf "%s-%s-%s" checksum caseTitle timestamp

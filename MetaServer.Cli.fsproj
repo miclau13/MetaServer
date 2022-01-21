@@ -19,7 +19,8 @@
     <Compile Include="./domain/HeatingInput.fs" />
     <Compile Include="./domain/IOInput.fs" />
     <Compile Include="./domain/NetCDFInput.fs" />
-    <Compile Include="./domain/OBCInput.fs" />
+    <Compile Include="./domain/OBCElevationInput.fs" />
+    <Compile Include="./domain/OBCNodeListInput.fs" />
     <Compile Include="./domain/RiverInput.fs" />
     <Compile Include="./domain/StartupInput.fs" />
     <Compile Include="./domain/StartupXInput.fs" />
