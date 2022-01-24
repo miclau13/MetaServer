@@ -10,24 +10,6 @@ open Util
 type RawInput =
     { RawString : string }
 
-// type Input = 
-//   | AirPressureInput of Dto.AirPressureInputDto
-//   | FVCOMInput of Dto.FVCOMInputDto
-//   | GridCoordinatesInput of Dto.GridCoordinatesInputDto
-//   | HeatingCalculateInput of Dto.HeatingCalculateInputDto
-//   | HeatingInput of Dto.HeatingInputDto
-//   | IOInput of Dto.IOInputDto
-//   | NetCDFInput of Dto.NetCDFInputDto
-//   | OBCElevationInput of Dto.OBCElevationInputDto
-//   | OBCNodeListInput of Dto.OBCNodeListInputDto
-//   | PrecipitationInput of Dto.PrecipitationInputDto
-//   | RiverInput of Dto.RiverInputDto
-//   | StartupInput of Dto.StartupInputDto
-//   | StartupXInput of Dto.StartupXInputDto
-//   | WaveInput of Dto.WaveInputDto
-//   | WindInput of Dto.WindInputDto
-//   | RawInput of RawInput
-
 type InputConfigReplacement = {
   Input: string
   Replacement: string

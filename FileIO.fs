@@ -202,7 +202,6 @@ let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: 
 
 let createFile (content: string, fileName: string, fileType: string, checksum: string) (fullPathInfo: FullPathInfo)= 
     // Get the  file path info
-    // let (targetPath, targetDir) = getInputConfigPath fileNameWithFormat fullPathInfo checksum
     let checksumFileInfo = { FileName = fileName; Checksum = checksum }
     let { FileFullPath = targetPath ; FileDirFullPath = targetDir } = getFilePathInfo fullPathInfo checksumFileInfo 
 
@@ -231,7 +230,6 @@ let createTreeFile (checksumStr: string) (fileNameWithFormat: string, fileType: 
         sprintf "commit %s\nAuthor: %s\nDate: %s\nRelated files: \n%s" commit currentUser currentTimeStamp checksumStr
 
     createFile (treeContent, fileNameWithFormat, fileType, checksum)
-
 
 let filterOutExistedFiles (targetFullPath: FullPathInfo) (inputFiles: list<Domain.Node> ) = 
     inputFiles
