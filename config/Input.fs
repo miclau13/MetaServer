@@ -6,29 +6,27 @@ open System.IO
 open Domain
 open FileIO
 open IOInput
-open OBCElevationInput
-open OBCNodeListInput
-open RiverInput
 open Util
 type RawInput =
     { RawString : string }
 
-type Input = 
-  | AirPressureInput of Dto.AirPressureInputDto
-  | FVCOMInput of Dto.FVCOMInputDto
-  | GridCoordinatesInput of Dto.GridCoordinatesInputDto
-  | HeatingInput of Dto.HeatingInputDto
-  | IOInput of Dto.IOInputDto
-  | NetCDFInput of Dto.NetCDFInputDto
-  | OBCElevationInput of Dto.OBCElevationInputDto
-  | OBCNodeListInput of Dto.OBCNodeListInputDto
-  | PrecipitationInput of Dto.PrecipitationInputDto
-  | RiverInput of Dto.RiverInputDto
-  | StartupInput of Dto.StartupInputDto
-  | StartupXInput of Dto.StartupXInputDto
-  | WaveInput of Dto.WaveInputDto
-  | WindInput of Dto.WindInputDto
-  | RawInput of RawInput
+// type Input = 
+//   | AirPressureInput of Dto.AirPressureInputDto
+//   | FVCOMInput of Dto.FVCOMInputDto
+//   | GridCoordinatesInput of Dto.GridCoordinatesInputDto
+//   | HeatingCalculateInput of Dto.HeatingCalculateInputDto
+//   | HeatingInput of Dto.HeatingInputDto
+//   | IOInput of Dto.IOInputDto
+//   | NetCDFInput of Dto.NetCDFInputDto
+//   | OBCElevationInput of Dto.OBCElevationInputDto
+//   | OBCNodeListInput of Dto.OBCNodeListInputDto
+//   | PrecipitationInput of Dto.PrecipitationInputDto
+//   | RiverInput of Dto.RiverInputDto
+//   | StartupInput of Dto.StartupInputDto
+//   | StartupXInput of Dto.StartupXInputDto
+//   | WaveInput of Dto.WaveInputDto
+//   | WindInput of Dto.WindInputDto
+//   | RawInput of RawInput
 
 type InputConfigReplacement = {
   Input: string
@@ -68,7 +66,7 @@ let getInputFileResult (fileName: string) (inputDirectory: string) (fileType: st
       let err = sprintf "File (%s) does not exist at the path (%s)." fileName inputDirectory
       failwith err
   | _ ->  
-      printfn "Input File (%s) is not created " fileName
+      printfn "Input File (name: %s, configType: %s) is not created " fileName fileType
       None
 
 let getFilePropertyRegex (property: string) = 
@@ -81,7 +79,7 @@ let getProperty (str: string) (property: string) =
     // So the index of the capturing group must be 3 unless regex is changed
     | Util.RegexGroup regex 3 str ->
       str
-    | _ -> failwith "Could not capture the value by getFilePropertyRegex"
+    | _ -> failwith (sprintf "Could not capture the string value (%s) with propert (%s) by getFilePropertyRegex" str property)
 
 // For output files 
 let initOutputFileNodes (files: IO.FileInfo []) (dir: string) = 
@@ -114,18 +112,95 @@ module RawInput =
 
 module AirPressureInput = 
     let toDto (str: string) =
-      let File = getProperty str "AIRPRESSURE_FILE"
-      let Kind = getProperty str "AIRPRESSURE_KIND"
-      let ConfigType = sprintf "%s-%s" "NML_SURFACE_FORCING" "AIRPRESSURE_FILE"
-      let result: Dto.AirPressureInputDto = {
-        File = File
-        Kind = Kind
-        ConfigType = ConfigType
+      let file = getProperty str "AIRPRESSURE_FILE"
+      let configType = sprintf "%s-%s" "NML_SURFACE_FORCING" "AIRPRESSURE_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
       }
-      let dto: Dto.Dto<Dto.AirPressureInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
-      dto  
+      dto
+
+module AMBedFlagInput = 
+    let toDto (str: string) =
+      let file = getProperty str "BEDFLAG_FILE"
+      let configType = sprintf "%s-%s" "NML_ADDITIONAL_MODELS" "BEDFLAG_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto 
+
+module AMDataAssimilationInput = 
+    let toDto (str: string) =
+      let file = getProperty str "DATA_ASSIMILATION_FILE"
+      let configType = sprintf "%s-%s" "NML_ADDITIONAL_MODELS" "DATA_ASSIMILATION_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto 
+
+module AMIceForcingInput = 
+    let toDto (str: string) =
+      let file = getProperty str "ICE_FORCING_FILE"
+      let configType = sprintf "%s-%s" "NML_ADDITIONAL_MODELS" "ICE_FORCING_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto 
+
+module AMIcingForcingInput = 
+    let toDto (str: string) =
+      let file = getProperty str "ICING_FORCING_FILE"
+      let configType = sprintf "%s-%s" "NML_ADDITIONAL_MODELS" "ICING_FORCING_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto 
+
+module AMSedimentModelInput = 
+    let toDto (str: string) =
+      let file = getProperty str "SEDIMENT_MODEL_FILE"
+      let configType = sprintf "%s-%s" "NML_ADDITIONAL_MODELS" "SEDIMENT_MODEL_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto 
+
+module AMSedimentParameterInput = 
+    let toDto (str: string) =
+      let file = getProperty str "SEDIMENT_PARAMETER_FILE"
+      let configType = sprintf "%s-%s" "NML_ADDITIONAL_MODELS" "SEDIMENT_PARAMETER_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto 
+
 module FVCOMInput = 
     let toDto (str: string) =
       let CaseTitle = getProperty str "CASE_TITLE"
@@ -134,7 +209,7 @@ module FVCOMInput =
       let StartDate = getProperty str "START_DATE"
       let EndDate = getProperty str "END_DATE"
       let ConfigType = sprintf "%s-%s" "NML_CASE" "FVCOMInput"
-      let result: Dto.FVCOMInputDto = {
+      let result = Dto.FVCOMInputDto{
         CaseTitle = CaseTitle
         TimeZone = TimeZone
         DateFormat = DateFormat
@@ -142,35 +217,109 @@ module FVCOMInput =
         EndDate = EndDate
         ConfigType = ConfigType
       }
-      let dto: Dto.Dto<Dto.FVCOMInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto
 module GridCoordinatesInput = 
     let toDto (str: string) =
       let File = getProperty str "GRID_FILE"
-      let FileUnits = getProperty str "GRID_FILE_UNITS"
       let ConfigType = sprintf "%s-%s" "NML_GRID_COORDINATES" "GRID_FILE"
-      let result: Dto.GridCoordinatesInputDto = {
+      let result = Dto.ConfigFileInputDto {
         File = File
-        FileUnits = FileUnits
         ConfigType = ConfigType
       }
-      let dto: Dto.Dto<Dto.GridCoordinatesInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module GridCoriolisInput = 
+    let toDto (str: string) =
+      let File = getProperty str "CORIOLIS_FILE"
+      let ConfigType = sprintf "%s-%s" "NML_GRID_COORDINATES" "CORIOLIS_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = File
+        ConfigType = ConfigType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module GridDepthInput = 
+    let toDto (str: string) =
+      let File = getProperty str "DEPTH_FILE"
+      let ConfigType = sprintf "%s-%s" "NML_GRID_COORDINATES" "DEPTH_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = File
+        ConfigType = ConfigType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module GridSigmaLevelsInput = 
+    let toDto (str: string) =
+      let File = getProperty str "SIGMA_LEVELS_FILE"
+      let ConfigType = sprintf "%s-%s" "NML_GRID_COORDINATES" "SIGMA_LEVELS_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = File
+        ConfigType = ConfigType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module GridSpongeInput = 
+    let toDto (str: string) =
+      let File = getProperty str "SPONGE_FILE"
+      let ConfigType = sprintf "%s-%s" "NML_GRID_COORDINATES" "SPONGE_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = File
+        ConfigType = ConfigType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module GroundWaterInput = 
+    let toDto (str: string) =
+      let File = getProperty str "GROUNDWATER_FILE"
+      let ConfigType = sprintf "%s-%s" "NML_GROUNDWATER" "GROUNDWATER_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = File
+        ConfigType = ConfigType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module HeatingCalculateInput = 
+    let toDto (str: string) =
+      let file = getProperty str "HEATING_CALCULATE_FILE"
+      let configType = sprintf "%s-%s" "NML_HEATING_CALCULATED" "HEATING_CALCULATE_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto
 module HeatingInput = 
     let toDto (str: string) =
-      let File = getProperty str "HEATING_FILE"
-      let Type = getProperty str "HEATING_TYPE"
-      let ConfigType = sprintf "%s-%s" "NML_SURFACE_FORCING" "HEATING_FILE"
-      let result: Dto.HeatingInputDto = {
-        File = File
-        Type = Type
-        ConfigType = ConfigType
+      let file = getProperty str "HEATING_FILE"
+      let configType = sprintf "%s-%s" "NML_SURFACE_FORCING" "HEATING_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
       }
-      let dto: Dto.Dto<Dto.HeatingInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto
@@ -179,249 +328,467 @@ module IOInput =
       let InputDirectory = getProperty str "INPUT_DIR"
       let OutputDirectory = getProperty str "OUTPUT_DIR"
       let ConfigType = sprintf "%s-%s" "NML_IO" "IOInput"
-      let result: Dto.IOInputDto = {
+      let result = Dto.IOInputDto {
         InputDirectory = InputDirectory
         OutputDirectory = OutputDirectory
         ConfigType = ConfigType
       }
-      let dto: Dto.Dto<Dto.IOInputDto> = {
-        data = result
-      }
-      dto
-module NetCDFInput = 
-    let toDto (str: string) =
-      let FirstOut = getProperty str "NC_FIRST_OUT"
-      let OutInterval = getProperty str "NC_OUT_INTERVAL"
-      let OutputStack = getProperty str "NC_OUTPUT_STACK"
-      let ConfigType = sprintf "%s-%s" "NML_NETCDF" "NetCDFInput"
-      let result: Dto.NetCDFInputDto = {
-        FirstOut = FirstOut
-        OutInterval = OutInterval
-        OutputStack = int OutputStack
-        ConfigType = ConfigType
-      }
-      let dto: Dto.Dto<Dto.NetCDFInputDto> = {
-        data = result
-      }
-      dto
-module OBCElevationInput = 
-    let toDto (str: string) =
-      let ElevationFile = getProperty str "OBC_ELEVATION_FILE"
-      let NodeListFile = getProperty str "OBC_NODE_LIST_FILE"
-      let ConfigType = sprintf "%s-%s" "NML_OPEN_BOUNDARY_CONTROL" "OBC_ELEVATION_FILE"
-      let result: Dto.OBCElevationInputDto = {
-        ElevationFile = ElevationFile
-        ConfigType = ConfigType
-      }
-      let dto: Dto.Dto<Dto.OBCElevationInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto
 
-module OBCNodeListInput = 
+
+module LagRestartInput = 
     let toDto (str: string) =
-      let NodeListFile = getProperty str "OBC_NODE_LIST_FILE"
-      let ConfigType = sprintf "%s-%s" "NML_OPEN_BOUNDARY_CONTROL" "OBC_NODE_LIST_FILE"
-      let result: Dto.OBCNodeListInputDto = {
-        NodeListFile = NodeListFile
-        ConfigType = ConfigType
+      let file = getProperty str "LAG_RESTART_FILE"
+      let configType = sprintf "%s-%s" "NML_LAG" "LAG_RESTART_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
       }
-      let dto: Dto.Dto<Dto.OBCNodeListInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto
+module LagStartInput = 
+    let toDto (str: string) =
+      let file = getProperty str "LAG_START_FILE"
+      let configType = sprintf "%s-%s" "NML_LAG" "LAG_START_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module LagOutInput = 
+    let toDto (str: string) =
+      let file = getProperty str "LAG_OUT_FILE"
+      let configType = sprintf "%s-%s" "NML_LAG" "LAG_OUT_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module NcnestNodeInput = 
+    let toDto (str: string) =
+      let file = getProperty str "NCNEST_NODE_FILES"
+      let configType = sprintf "%s-%s" "NML_NCNEST" "NCNEST_NODE_FILES"
+      let result = Dto.ConfigFileInputDto {
+        ConfigType = configType
+        File = file
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module NestingInput = 
+    let toDto (str: string) =
+      let file = getProperty str "NESTING_FILE_NAME"
+      let configType = sprintf "%s-%s" "NML_NESTING" "NESTING_FILE_NAME"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module StationInput = 
+    let toDto (str: string) =
+      let file = getProperty str "STATION_FILE"
+      let configType = sprintf "%s-%s" "NML_STATION_TIMESERIES" "STATION_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module OBCElevationInput = 
+    let toDto (str: string) =
+      let file = getProperty str "OBC_ELEVATION_FILE"
+      let configType = sprintf "%s-%s" "NML_OPEN_BOUNDARY_CONTROL" "OBC_ELEVATION_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module OBCLongShoreFlowInput = 
+  let toDto (str: string) =
+    let file = getProperty str "OBC_LONGSHORE_FLOW_FILE"
+    let configType = sprintf "%s-%s" "NML_OPEN_BOUNDARY_CONTROL" "OBC_LONGSHORE_FLOW_FILE"
+    let result = Dto.ConfigFileInputDto {
+      File = file
+      ConfigType = configType
+    }
+    let dto: Dto.Dto<Dto.NodeDto> = {
+      data = result
+    }
+    dto
+
+module OBCMeanFlowInput = 
+  let toDto (str: string) =
+    let file = getProperty str "OBC_MEANFLOW_FILE"
+    let configType = sprintf "%s-%s" "NML_OPEN_BOUNDARY_CONTROL" "OBC_MEANFLOW_FILE"
+    let result = Dto.ConfigFileInputDto {
+      File = file
+      ConfigType = configType
+    }
+    let dto: Dto.Dto<Dto.NodeDto> = {
+      data = result
+    }
+    dto
+
+module OBCNodeListInput = 
+  let toDto (str: string) =
+    let file = getProperty str "OBC_NODE_LIST_FILE"
+    let configType = sprintf "%s-%s" "NML_OPEN_BOUNDARY_CONTROL" "OBC_NODE_LIST_FILE"
+    let result = Dto.ConfigFileInputDto {
+      File = file
+      ConfigType = configType
+    }
+    let dto: Dto.Dto<Dto.NodeDto> = {
+      data = result
+    }
+    dto
+
+module OBCSaltInput = 
+  let toDto (str: string) =
+    let file = getProperty str "OBC_SALT_FILE"
+    let configType = sprintf "%s-%s" "NML_OPEN_BOUNDARY_CONTROL" "OBC_SALT_FILE"
+    let result = Dto.ConfigFileInputDto {
+      File = file
+      ConfigType = configType
+    }
+    let dto: Dto.Dto<Dto.NodeDto> = {
+      data = result
+    }
+    dto
+
+module OBCTempInput = 
+  let toDto (str: string) =
+    let file = getProperty str "OBC_TEMP_FILE"
+    let configType = sprintf "%s-%s" "NML_OPEN_BOUNDARY_CONTROL" "OBC_TEMP_FILE"
+    let result = Dto.ConfigFileInputDto {
+      File = file
+      ConfigType = configType
+    }
+    let dto: Dto.Dto<Dto.NodeDto> = {
+      data = result
+    }
+    dto
+module PhysicsBottomRoughnessInput = 
+  let toDto (str: string) =
+    let file = getProperty str "BOTTOM_ROUGHNESS_FILE"
+    let configType = sprintf "%s-%s" "NML_PHYSICS" "BOTTOM_ROUGHNESS_FILE"
+    let result = Dto.ConfigFileInputDto {
+      File = file
+      ConfigType = configType
+    }
+    let dto: Dto.Dto<Dto.NodeDto> = {
+      data = result
+    }
+    dto
+module PhysicsHorizontalMixingInput = 
+  let toDto (str: string) =
+    let file = getProperty str "HORIZONTAL_MIXING_FILE"
+    let configType = sprintf "%s-%s" "NML_PHYSICS" "HORIZONTAL_MIXING_FILE"
+    let result = Dto.ConfigFileInputDto {
+      File = file
+      ConfigType = configType
+    }
+    let dto: Dto.Dto<Dto.NodeDto> = {
+      data = result
+    }
+    dto
 module PrecipitationInput = 
     let toDto (str: string) =
-      let File = getProperty str "PRECIPITATION_FILE"
-      let Kind = getProperty str " PRECIPITATION_KIND"
-      let ConfigType = sprintf "%s-%s" "NML_SURFACE_FORCING" "PRECIPITATION_FILE"
-      let result: Dto.PrecipitationInputDto = {
-        ConfigType = ConfigType
-        File = File
-        Kind = Kind
+      let file = getProperty str "PRECIPITATION_FILE"
+      let configType = sprintf "%s-%s" "NML_SURFACE_FORCING" "PRECIPITATION_FILE"
+      let result = Dto.ConfigFileInputDto {
+        ConfigType = configType
+        File = file
       }
-      let dto: Dto.Dto<Dto.PrecipitationInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
+        data = result
+      }
+      dto
+
+module ProbesInput = 
+    let toDto (str: string) =
+      let file = getProperty str "PROBES_FILE"
+      let configType = sprintf "%s-%s" "NML_PROBES" "PROBES_FILE"
+      let result = Dto.ConfigFileInputDto {
+        ConfigType = configType
+        File = file
+      }
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto
 
 module RiverInput = 
     let toDto (str: string) =
-      let InfoFile = getProperty str "RIVER_INFO_FILE"
-      let Kind = getProperty str "RIVER_KIND"
-      let Number = getProperty str "RIVER_NUMBER"
-      let ConfigType = sprintf "%s-%s" "NML_RIVER_TYPE" "RIVER_INFO_FILE"
-      let result: Dto.RiverInputDto = {
-        InfoFile = InfoFile
-        Kind = Kind
-        Number = int Number
-        ConfigType = ConfigType
+      let file = getProperty str "RIVER_INFO_FILE"
+      let configType = sprintf "%s-%s" "NML_RIVER_TYPE" "RIVER_INFO_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
       }
-      let dto: Dto.Dto<Dto.RiverInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto
 
 module StartupInput = 
     let toDto (str: string) =
-      let File = getProperty str "STARTUP_FILE"
-      let Type = getProperty str "STARTUP_TYPE"
-      let ConfigType = sprintf "%s-%s" "NML_STARTUP" "STARTUP_FILE"
-      let result: Dto.StartupInputDto = {
-        File = File
-        Type = Type
-        ConfigType = ConfigType
+      let file = getProperty str "STARTUP_FILE"
+      let configType = sprintf "%s-%s" "NML_STARTUP" "STARTUP_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
       }
-      let dto: Dto.Dto<Dto.StartupInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto
 
 module StartupXInput = 
     let toDto (str: string) =
-      let File = getProperty str "STARTUP_FILE"
-      let Type = getProperty str "STARTUP_TYPE"
-      let ConfigType = sprintf "%s-%s" "NML_STARTUPX" "STARTUP_FILE"
-      let result: Dto.StartupXInputDto = {
-        File = File
-        Type = Type
-        ConfigType = ConfigType
+      let file = getProperty str "STARTUP_FILE"
+      let configType = sprintf "%s-%s" "NML_STARTUPX" "STARTUP_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
       }
-      let dto: Dto.Dto<Dto.StartupXInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto 
 
 module WaveInput = 
     let toDto (str: string) =
-      let File = getProperty str "WAVE_FILE"
-      let Kind = getProperty str "WAVE_KIND"
-      let ConfigType = sprintf "%s-%s" "NML_SURFACE_FORCING" "WAVE_FILE"
-      let result: Dto.WaveInputDto = {
-        File = File
-        Kind = Kind
-        ConfigType = ConfigType
+      let file = getProperty str "WAVE_FILE"
+      let configType = sprintf "%s-%s" "NML_SURFACE_FORCING" "WAVE_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
       }
-      let dto: Dto.Dto<Dto.WaveInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto  
 
 module WindInput = 
     let toDto (str: string) =
-      let File = getProperty str "WIND_FILE"
-      let Type = getProperty str "WIND_TYPE"
-      let ConfigType = sprintf "%s-%s" "NML_SURFACE_FORCING" "WIND_FILE"
-      let result: Dto.WindInputDto = {
-        File = File
-        Type = Type
-        ConfigType = ConfigType
+      let file = getProperty str "WIND_FILE"
+      let configType = sprintf "%s-%s" "NML_SURFACE_FORCING" "WIND_FILE"
+      let result = Dto.ConfigFileInputDto {
+        File = file
+        ConfigType = configType
       }
-      let dto: Dto.Dto<Dto.WindInputDto> = {
+      let dto: Dto.Dto<Dto.NodeDto> = {
         data = result
       }
       dto   
 
+let getResultArrayFromNodeDto (nodeDto: Dto.Dto<Dto.NodeDto>) =
+  nodeDto |> Dto.toDomain |> Array.singleton
+
+let getNodeResultFromParserStr (parserStr: string) =
+  match parserStr with
+  | RegexTitle " &NML_ADDITIONAL_MODELS\s" str -> 
+    let AMBedFlagInputResult = 
+          str 
+          |> AMBedFlagInput.toDto 
+          |> getResultArrayFromNodeDto
+    let AMDataAssimilationInputResult = 
+          str 
+          |> AMDataAssimilationInput.toDto 
+          |> getResultArrayFromNodeDto
+    let AMIceForcingInputResult = 
+          str 
+          |> AMIceForcingInput.toDto 
+          |> getResultArrayFromNodeDto
+    let AMIcingForcingInputResult = 
+          str 
+          |> AMIcingForcingInput.toDto 
+          |> getResultArrayFromNodeDto
+    let AMSedimentModelInputResult = 
+          str 
+          |> AMSedimentModelInput.toDto 
+          |> getResultArrayFromNodeDto
+    let AMSedimentParameterInputResult = 
+          str 
+          |> AMSedimentParameterInput.toDto 
+          |> getResultArrayFromNodeDto
+    Array.reduce Array.append [| AMBedFlagInputResult ; AMDataAssimilationInputResult ; AMIceForcingInputResult; AMIcingForcingInputResult; AMSedimentModelInputResult; AMSedimentParameterInputResult |]
+  | RegexTitle "&NML_CASE\s" str -> 
+    str 
+    |> FVCOMInput.toDto 
+    |> getResultArrayFromNodeDto
+  | RegexTitle "&NML_GRID_COORDINATES\s" str -> 
+    let gridCoordinatesInputResult = 
+          str 
+          |> GridCoordinatesInput.toDto 
+          |> getResultArrayFromNodeDto
+    let gridCoriolisInputResult = 
+          str 
+          |> GridCoriolisInput.toDto 
+          |> getResultArrayFromNodeDto
+    let gridDepthInputResult = 
+          str 
+          |> GridDepthInput.toDto 
+          |> getResultArrayFromNodeDto
+    let gridSigmaLevelsInputResult = 
+          str 
+          |> GridSigmaLevelsInput.toDto 
+          |> getResultArrayFromNodeDto
+    let gridSpongeInputResult = 
+          str 
+          |> GridSpongeInput.toDto 
+          |> getResultArrayFromNodeDto
+    Array.reduce Array.append [| gridCoordinatesInputResult ; gridCoriolisInputResult ; gridDepthInputResult ; gridSigmaLevelsInputResult ; gridSpongeInputResult |]
+  | RegexTitle "&NML_GROUNDWATER\s" str ->
+    str 
+    |> GroundWaterInput.toDto 
+    |> getResultArrayFromNodeDto
+  | RegexTitle "&NML_HEATING_CALCULATED\s" str -> 
+    str 
+    |> HeatingCalculateInput.toDto 
+    |> getResultArrayFromNodeDto
+  | RegexTitle "&NML_IO\s" str -> 
+    str 
+    |> IOInput.toDto 
+    |> getResultArrayFromNodeDto
+  | RegexTitle "&NML_LAG\s" str -> 
+    let lagOutInputResult = 
+          str 
+          |> LagOutInput.toDto 
+          |> getResultArrayFromNodeDto
+    let lagRestartInputResult = 
+          str 
+          |> LagRestartInput.toDto 
+          |> getResultArrayFromNodeDto
+    let lagStartInputResult = 
+          str 
+          |> LagStartInput.toDto 
+          |> getResultArrayFromNodeDto
+    Array.reduce Array.append [| lagOutInputResult ; lagRestartInputResult ; lagStartInputResult |]
+  | RegexTitle "&NML_NCNEST\s" str ->
+    str 
+    |> NcnestNodeInput.toDto 
+    |> getResultArrayFromNodeDto  
+  | RegexTitle "&NML_NESTING\s" str ->
+    let nestingInputResult = 
+      str 
+      |> NestingInput.toDto 
+      |> getResultArrayFromNodeDto
+    Array.reduce Array.append [| nestingInputResult |]
+  | RegexTitle "&NML_OPEN_BOUNDARY_CONTROL\s" str -> 
+    let OBCElevationInputResult = 
+          str 
+          |> OBCElevationInput.toDto 
+          |> getResultArrayFromNodeDto
+    let OBCLongShoreFlowInputResult = 
+          str 
+          |> OBCLongShoreFlowInput.toDto 
+          |> getResultArrayFromNodeDto
+    let OBCMeanFlowInputResult = 
+          str 
+          |> OBCMeanFlowInput.toDto 
+          |> getResultArrayFromNodeDto
+    let OBCNodeListInputResult = 
+          str 
+          |> OBCNodeListInput.toDto 
+          |> getResultArrayFromNodeDto
+    let OBCSaltInputResult = 
+          str 
+          |> OBCSaltInput.toDto 
+          |> getResultArrayFromNodeDto
+    let OBCTempInputResult = 
+          str 
+          |> OBCTempInput.toDto 
+          |> getResultArrayFromNodeDto
+    Array.reduce Array.append [| OBCElevationInputResult ; OBCLongShoreFlowInputResult ; OBCMeanFlowInputResult ; OBCNodeListInputResult ; OBCSaltInputResult ;OBCTempInputResult |]
+  | RegexTitle "&NML_PHYSICS\s" str -> 
+    let physicsBottomRoughnessInputResult = 
+          str 
+          |> PhysicsBottomRoughnessInput.toDto 
+          |> getResultArrayFromNodeDto
+    let physicsHorizontalMixingInputResult = 
+          str 
+          |> PhysicsHorizontalMixingInput.toDto 
+          |> getResultArrayFromNodeDto
+    Array.reduce Array.append [|physicsBottomRoughnessInputResult ; physicsHorizontalMixingInputResult|]
+  | RegexTitle "&NML_PROBES\s" str -> 
+    str 
+    |> ProbesInput.toDto 
+    |> getResultArrayFromNodeDto  
+  | RegexTitle "&NML_RIVER_TYPE\s" str -> 
+    str 
+    |> RiverInput.toDto 
+    |> getResultArrayFromNodeDto
+  | RegexTitle "&NML_STARTUPX\s" str ->
+    str 
+    |> StartupXInput.toDto 
+    |> getResultArrayFromNodeDto
+  | RegexTitle "&NML_STARTUP\s" str ->
+    str 
+    |> StartupInput.toDto 
+    |> getResultArrayFromNodeDto
+  | RegexTitle "&NML_STATION_TIMESERIES\s" str ->
+    str 
+    |> StationInput.toDto 
+    |> getResultArrayFromNodeDto
+  | RegexTitle "&NML_SURFACE_FORCING\s" str ->
+    let airPressureInputResult = 
+      str 
+      |> AirPressureInput.toDto 
+      |> getResultArrayFromNodeDto
+    let heatingInputResult = 
+        str 
+        |> HeatingInput.toDto 
+      |> getResultArrayFromNodeDto
+    let precipitationInputResult = 
+      str 
+      |> PrecipitationInput.toDto 
+      |> getResultArrayFromNodeDto
+    let windInputResult = 
+      str 
+      |> WindInput.toDto 
+      |> getResultArrayFromNodeDto
+    let waveInputResult = 
+      str 
+      |> WaveInput.toDto 
+      |> getResultArrayFromNodeDto
+    
+    Array.reduce Array.append [|airPressureInputResult; heatingInputResult; precipitationInputResult; windInputResult; waveInputResult |]
+  | _ -> [|Error "No suitable toDto"|] 
+  
 let parserResultToDomain (result: list<string>) = 
     result 
     |> Array.ofList
-    // TODO parallel collect to array of array then flatten
-    // |> Array.Parallel
-    |> Array.fold(fun acc item -> 
-      // printfn "item: %s" item 
-      match item with 
-      | RegexTitle "&NML_CASE\s" str -> 
-        let result = str |> FVCOMInput.toDto |> Dto.FVCOMInputDto.toDomain 
-        match result with 
-        | Ok r -> Array.append acc [|(Ok (Domain.FVCOMInput r))|]
-        | Error e -> Array.append acc [|Error e|]
-      | RegexTitle "&NML_GRID_COORDINATES\s" str -> 
-        let result = str |> GridCoordinatesInput.toDto |> Dto.GridCoordinatesInputDto.toDomain 
-        match result with 
-        | Ok r -> Array.append acc [|(Ok (Domain.GridCoordinatesInput r))|]
-        | Error e -> Array.append acc [|Error e|]
-      | RegexTitle "&NML_IO\s" str -> 
-        let result = str |> IOInput.toDto |> Dto.IOInputDto.toDomain 
-        // printfn "NML_IO str: %s , result: %A" str result
-        match result with 
-        | Ok r -> Array.append acc [|(Ok (Domain.IOInput r))|]
-        | Error e -> Array.append acc [|Error e|]
-      | RegexTitle "&NML_NETCDF\s" str -> 
-        let result = str |> NetCDFInput.toDto |> Dto.NetCDFInputDto.toDomain 
-        match result with 
-        | Ok r -> Array.append acc [|(Ok (Domain.NetCDFInput r))|]
-        | Error e -> Array.append acc [|Error e|]
-      | RegexTitle "&NML_OPEN_BOUNDARY_CONTROL\s" str -> 
-        let OBCElevationInputResult = 
-          str 
-          |> OBCElevationInput.toDto 
-          |> Dto.OBCElevationInputDto.toDomain 
-          |> function
-            | Ok r -> Ok (Domain.OBCElevationInput r)
-            | Error e -> Error e
-        let OBCNodeListInputResult = 
-          str 
-          |> OBCNodeListInput.toDto 
-          |> Dto.OBCNodeListInputDto.toDomain 
-          |> function
-            | Ok r -> Ok (Domain.OBCNodeListInput r)
-            | Error e -> Error e
-        Array.append acc [|OBCElevationInputResult; OBCNodeListInputResult|]
-      | RegexTitle "&NML_RIVER_TYPE\s" str -> 
-        let result = str |> RiverInput.toDto |> Dto.RiverInputDto.toDomain 
-        match result with 
-        | Ok r -> Array.append acc [|(Ok (Domain.RiverInput r))|]
-        | Error e -> Array.append acc [|Error e|]
-      | RegexTitle "&NML_STARTUPX\s" str ->
-        let result = str |> StartupXInput.toDto |> Dto.StartupXInputDto.toDomain 
-        match result with 
-        | Ok r -> Array.append acc [|(Ok (Domain.StartupXInput r))|]
-        | Error e -> Array.append acc [|Error e|]
-      | RegexTitle "&NML_STARTUP\s" str ->
-        let result = str |> StartupInput.toDto |> Dto.StartupInputDto.toDomain 
-        match result with 
-        | Ok r -> Array.append acc [|(Ok (Domain.StartupInput r))|]
-        | Error e -> Array.append acc [|Error e|]
-      | RegexTitle "&NML_SURFACE_FORCING\s" str ->
-        let airPressureInputResult = 
-          str 
-          |> AirPressureInput.toDto 
-          |> Dto.AirPressureInputDto.toDomain
-          |> function
-            | Ok r -> Ok (Domain.AirPressureInput r)
-            | Error e -> Error e
-        let heatingInputResult = 
-            str 
-            |> HeatingInput.toDto 
-            |> Dto.HeatingInputDto.toDomain 
-            |> function
-              | Ok r -> Ok (Domain.HeatingInput r)
-              | Error e -> Error e
-        let precipitationInputResult = 
-          str 
-          |> PrecipitationInput.toDto 
-          |> Dto.PrecipitationInputDto.toDomain 
-          |> function
-            | Ok r -> Ok (Domain.PrecipitationInput r)
-            | Error e -> Error e
-        let windInputResult = 
-          str 
-          |> WindInput.toDto 
-          |> Dto.WindInputDto.toDomain 
-          |> function
-            | Ok r -> Ok (Domain.WindInput r)
-            | Error e -> Error e
-        let waveInputResult = 
-          str 
-          |> WaveInput.toDto 
-          |> Dto.WaveInputDto.toDomain 
-          |> function
-            | Ok r -> Ok (Domain.WaveInput r)
-            | Error e -> Error e
-        Array.append acc [|airPressureInputResult; heatingInputResult; precipitationInputResult; windInputResult; waveInputResult;|]
-      | _ -> Array.append acc [|Error "No suitable toDomain"|] 
-    ) Array.empty
-    // |> printfn "parserResultToDomain result:%A" 
+    |> Array.Parallel.map (fun item ->
+        getNodeResultFromParserStr item
+    )
+    |> Array.reduce Array.append
 
 let pickIOInput (nodes: Node list) = 
   List.pick (
@@ -438,95 +805,13 @@ let getIOOutputDirectory (input: IOInput) =
     let (OutputDirectory dir) = input.OutputDirectory 
     dir
 
-// let getFileResult (inputDirectory: string) (node: Node) = 
-//     match node with 
-//     | Simulation _ -> None
-//     | Grid _ -> None
-//     | File _ -> None
-//     | Domain.AirPressureInput n -> 
-//         let (InputFile file) = n.File
-//         getInputFileResult file inputDirectory "AirPressureInput"
-//     | Domain.FVCOMInput _ ->
-//         None
-//     | Domain.GridCoordinatesInput n -> 
-//         let (InputFile file) = n.File
-//         getInputFileResult file inputDirectory "GridCoordinatesInput"
-//     | Domain.HeatingInput n -> 
-//         let (InputFile file) = n.File
-//         getInputFileResult file inputDirectory "HeatingInput"
-//     | Domain.IOInput _ -> 
-//         None
-//     | Domain.NetCDFInput _ -> 
-//         None
-//     | Domain.OBCElevationInput n -> 
-//         let (ElevationFile file) = n.ElevationFile
-//         getInputFileResult file inputDirectory "OBCElevationInput"
-//     | Domain.OBCNodeListInput n -> 
-//         let (NodeListFile file) = n.NodeListFile
-//         getInputFileResult file inputDirectory "OBCNodeListInput"
-//     | Domain.RiverInput n -> 
-//         let (InfoFile file) = n.InfoFile
-//         getInputFileResult file inputDirectory "RiverInput"
-//     | Domain.StartupInput n -> 
-//         let (InputFile file) = n.File
-//         getInputFileResult file inputDirectory "StartupInput"
-//     | Domain.StartupXInput n -> 
-//         let (InputFile file) = n.File
-//         getInputFileResult file inputDirectory "StartupXInput"
-//     | Domain.WaveInput n -> 
-//         let (InputFile file) = n.File
-//         getInputFileResult file inputDirectory "WaveInput"
-//     | Domain.WindInput n -> 
-//         let (InputFile file) = n.File
-//         getInputFileResult file inputDirectory "WindInput"
-
-// let findExistingInputFilesWithType (inputDirectory: string) (inputs: Node list) =  
-//       let files = List.map (getFileResult inputDirectory) inputs
-//       let inputFilesWithType = files |> List.choose id
-//       inputFilesWithType
-
 let getFile (inputDirectory: string) (node: Node) = 
     match node with 
-    | Simulation _ | Grid _ | File _ | Domain.IOInput _ | Domain.NetCDFInput _ | Domain.FVCOMInput _-> None
-    | Domain.AirPressureInput n -> 
+    | Simulation _ | File _ | Domain.IOInput _ | Domain.FVCOMInput _-> None
+    | Domain.ConfigFileInput n -> 
         let (InputFile file) = n.File
-        let (InputType configType) = n.ConfigType
+        let (FileType configType) = n.ConfigType
         getInputFileResult file inputDirectory configType
-    | Domain.GridCoordinatesInput n -> 
-        let (InputFile file) = n.File
-        let (InputType configType) = n.ConfigType
-        getInputFileResult file inputDirectory configType
-    | Domain.HeatingInput n -> 
-        let (InputFile file) = n.File
-        let (InputType configType) = n.ConfigType
-        getInputFileResult file inputDirectory configType
-    | Domain.OBCElevationInput n -> 
-        let (ElevationFile file) = n.ElevationFile
-        let (InputType configType) = n.ConfigType
-        getInputFileResult file inputDirectory configType
-    | Domain.OBCNodeListInput n -> 
-        let (NodeListFile file) = n.NodeListFile
-        let (InputType configType) = n.ConfigType
-        getInputFileResult file inputDirectory configType
-    | Domain.PrecipitationInput n -> 
-        let (InputFile file) = n.File
-        let (InputType fileType) = n.ConfigType
-        getInputFileResult file inputDirectory fileType
-    | Domain.RiverInput n -> 
-        let (InfoFile file) = n.InfoFile
-        getInputFileResult file inputDirectory "RiverInput"
-    | Domain.StartupInput n -> 
-        let (InputFile file) = n.File
-        getInputFileResult file inputDirectory "StartupInput"
-    | Domain.StartupXInput n -> 
-        let (InputFile file) = n.File
-        getInputFileResult file inputDirectory "StartupXInput"
-    | Domain.WaveInput n -> 
-        let (InputFile file) = n.File
-        getInputFileResult file inputDirectory "WaveInput"
-    | Domain.WindInput n -> 
-        let (InputFile file) = n.File
-        getInputFileResult file inputDirectory "WindInput"
 
 let getExistingInputFiles (inputDirectory: string) (inputs: Node list) =  
       let files = 

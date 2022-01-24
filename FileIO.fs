@@ -180,7 +180,7 @@ let copyFile (sourceBasePath: string, sourceDirectory: string) (targetFullPath: 
         if checkIfFileExist targetPath then
             printfn "File with path (%s) already exists, no need to copy file again." targetPath
         else
-            File.Copy(sourcePath, targetPath)
+            File.Copy(sourcePath, targetPath, true)
             printfn "%s --- copied to ---> %s" sourcePath targetPath
     else 
         printfn "Target Dir (%s) does not exist, could not copy file to there" targetDir
@@ -195,7 +195,6 @@ let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: 
     |> Array.Parallel.iter (fun item -> 
         match item with 
         | Domain.File f -> 
-            // TODO
             let fullPathInfo = { BasePath = basePath ; RelativePath = outputDirectory }
             copyFile (basePath, sourceDirectory) fullPathInfo f
         | _ ->  printfn "Item is not copied because it is not defined in the domain: %A" item

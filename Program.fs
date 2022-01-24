@@ -229,7 +229,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
 
                 let simulationInputFiles = inputConfigFileNode::inputFiles
-                printfn "targetOutputFullPath: %s" targetOutputFullPath
+                // printfn "targetOutputFullPath: %s" targetOutputFullPath
                 createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFileNodes, targetOutputFullPath)
                 
                 // End of creating directory for the calculation

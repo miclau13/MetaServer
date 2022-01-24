@@ -36,23 +36,26 @@ let clientWithCypher = Db.getDbClient ()
 let getNodeLabel (node: Node) =
     let label =
         match node with
+        | ConfigFileInput _ -> nameof ConfigFileInput
         | File _ -> nameof File
-        | Grid _ -> nameof Grid
-        | Simulation _ -> nameof Simulation
-        | AirPressureInput _ -> nameof AirPressureInput
-        | FVCOMInput _ -> nameof FVCOMInput
-        | GridCoordinatesInput _ -> nameof GridCoordinatesInput
-        | HeatingInput _ -> nameof HeatingInput
         | IOInput _ -> nameof IOInput
-        | NetCDFInput _ -> nameof NetCDFInput
-        | OBCElevationInput _ -> nameof OBCElevationInput
-        | OBCNodeListInput _ -> nameof OBCNodeListInput
-        | PrecipitationInput _ -> nameof PrecipitationInput
-        | RiverInput _ -> nameof RiverInput
-        | StartupInput _ -> nameof StartupInput
-        | StartupXInput _ -> nameof StartupXInput
-        | WaveInput _ -> nameof WaveInput
-        | WindInput _ -> nameof WindInput
+        | FVCOMInput _ -> nameof FVCOMInput
+        | Simulation _ -> nameof Simulation
+        // | Grid _ -> nameof Grid
+
+        // | AirPressureInput _ -> nameof AirPressureInput
+        
+        // | GridCoordinatesInput _ -> nameof GridCoordinatesInput
+        // | HeatingInput _ -> nameof HeatingInput
+        // | NetCDFInput _ -> nameof NetCDFInput
+        // | OBCElevationInput _ -> nameof OBCElevationInput
+        // | OBCNodeListInput _ -> nameof OBCNodeListInput
+        // | PrecipitationInput _ -> nameof PrecipitationInput
+        // | RiverInput _ -> nameof RiverInput
+        // | StartupInput _ -> nameof StartupInput
+        // | StartupXInput _ -> nameof StartupXInput
+        // | WaveInput _ -> nameof WaveInput
+        // | WindInput _ -> nameof WindInput
     label
 
 // 10/11/2021
@@ -215,44 +218,71 @@ let getClientWithSetStr (str: string) (client: Cypher.ICypherFluentQuery)   =
 // 8/11/2021
 let getClientWithNodeInputParameter (node: Node) (paramName: string) (client: Cypher.ICypherFluentQuery) = 
     match node with 
+    | ConfigFileInput input -> client.WithParam(paramName, (fromDomain node))
     | Simulation simulation -> client.WithParam(paramName, (SimulationDto.fromDomain simulation))
     | File file -> client.WithParam(paramName, (FileDto.fromDomain file))
-    | Grid grid -> client.WithParam(paramName, (GridDto.fromDomain grid))
-    | AirPressureInput input -> client.WithParam(paramName, (AirPressureInputDto.fromDomain input))
+    // | Grid grid -> client.WithParam(paramName, (GridDto.fromDomain grid))
+
+    // | AdditionalModelsDataAssimilationInput input -> client.WithParam(paramName, (AdditionalModelsDataAssimilationInputDto.fromDomain input))
+    // | AdditionalModelsSedimentModelInput input -> client.WithParam(paramName, (AdditionalModelsSedimentModelInputDto.fromDomain input))
+    // | AdditionalModelsBedflagInput input -> client.WithParam(paramName, (AdditionalModelsBedflagInputDto.fromDomain input))
+    // | AdditionalModelsIcingForcingInput input -> client.WithParam(paramName, (AdditionalModelsIcingForcingInputDto.fromDomain input))
+    // | AdditionalModelsIceForcingInput input -> client.WithParam(paramName, (AdditionalModelsIceForcingInputDto.fromDomain input))
+    // | AirPressureInput input -> client.WithParam(paramName, (AirPressureInputDto.fromDomain input))
     | FVCOMInput input -> client.WithParam(paramName, (FVCOMInputDto.fromDomain input))
-    | GridCoordinatesInput input -> client.WithParam(paramName, (GridCoordinatesInputDto.fromDomain input))
-    | HeatingInput input -> client.WithParam(paramName, (HeatingInputDto.fromDomain input))
+    // | GridCoordinatesInput input -> client.WithParam(paramName, (GridCoordinatesInputDto.fromDomain input))
+    // | GridCoriolisInput input -> client.WithParam(paramName, (GridCoriolisInputDto.fromDomain input))
+    // | GridDepthInput input -> client.WithParam(paramName, (GridDepthInputDto.fromDomain input))
+    // | GridSigmaLevelsInput input -> client.WithParam(paramName, (GridSigmaLevelsInputDto.fromDomain input))
+    // | GridSpongeInput input -> client.WithParam(paramName, (GridSpongeInputDto.fromDomain input))
+    // | GroundwaterInput input -> client.WithParam(paramName, (GroundwaterInputDto.fromDomain input))
+    // | HeatingCalculateInput input -> client.WithParam(paramName, (HeatingCalculateInputDto.fromDomain input))
+    // | HeatingInput input -> client.WithParam(paramName, (HeatingInputDto.fromDomain input))
     | IOInput input -> client.WithParam(paramName, (IOInputDto.fromDomain input))
-    | NetCDFInput input -> client.WithParam(paramName, (NetCDFInputDto.fromDomain input))
-    | OBCElevationInput input -> client.WithParam(paramName, (OBCElevationInputDto.fromDomain input))
-    | OBCNodeListInput input -> client.WithParam(paramName, (OBCNodeListInputDto.fromDomain input))
-    | PrecipitationInput input -> client.WithParam(paramName, (PrecipitationInputDto.fromDomain input))
-    | RiverInput input -> client.WithParam(paramName, (RiverInputDto.fromDomain input))
-    | StartupInput input -> client.WithParam(paramName, (StartupInputDto.fromDomain input))
-    | StartupXInput input -> client.WithParam(paramName, (StartupXInputDto.fromDomain input))
-    | WaveInput input -> client.WithParam(paramName, (WaveInputDto.fromDomain input))
-    | WindInput input -> client.WithParam(paramName, (WindInputDto.fromDomain input))
+    // | LagStartInput input -> client.WithParam(paramName, (LagStartInputDto.fromDomain input))
+    // | LagOutInput input -> client.WithParam(paramName, (LagOutInputDto.fromDomain input))
+    // | LagRestartInput input -> client.WithParam(paramName, (LagRestartInputDto.fromDomain input))
+    // | NcnestNodeInput input -> client.WithParam(paramName, (NcnestNodeInputDto.fromDomain input))
+    // | NestingInput input -> client.WithParam(paramName, (NestingInputDto.fromDomain input))
+    // | NestingStationInput input -> client.WithParam(paramName, (NestingStationInputDto.fromDomain input))
+    // | NetCDFInput input -> client.WithParam(paramName, (NetCDFInputDto.fromDomain input))
+    // | OBCElevationInput input -> client.WithParam(paramName, (OBCElevationInputDto.fromDomain input))
+    // | OBCLongshoreFlowInput input -> client.WithParam(paramName, (OBCLongshoreFlowInputDto.fromDomain input))
+    // | OBCMeanFlowInput input -> client.WithParam(paramName, (OBCMeanFlowInputDto.fromDomain input))
+    // | OBCNodeListInput input -> client.WithParam(paramName, (OBCNodeListInputDto.fromDomain input))
+    // | OBCSaltInput input -> client.WithParam(paramName, (OBCSaltInputDto.fromDomain input))
+    // | OBCTempInput input -> client.WithParam(paramName, (OBCTempInputDto.fromDomain input))
+    // | PhysicsHorizontalMixingInput input -> client.WithParam(paramName, (PhysicsHorizontalMixingInputDto.fromDomain input))
+    // | PhysicsBottomRoughnessInput input -> client.WithParam(paramName, (PhysicsBottomRoughnessInputDto.fromDomain input))
+    // | ProbesInput input -> client.WithParam(paramName, (ProbesInputDto.fromDomain input))
+    // | PrecipitationInput input -> client.WithParam(paramName, (PrecipitationInputDto.fromDomain input))
+    // | RiverInput input -> client.WithParam(paramName, (RiverInputDto.fromDomain input))
+    // | StartupInput input -> client.WithParam(paramName, (StartupInputDto.fromDomain input))
+    // | StartupXInput input -> client.WithParam(paramName, (StartupXInputDto.fromDomain input))
+    // | WaveInput input -> client.WithParam(paramName, (WaveInputDto.fromDomain input))
+    // | WindInput input -> client.WithParam(paramName, (WindInputDto.fromDomain input))
 
 
 let getNodeAttributes (node: Node) = 
     match node with
+        | ConfigFileInput file -> { Label = "Config"; Key = "ConfigType"; KeyValue = file.ConfigType |> FileType.value }
         | Simulation simulation -> { Label = "Simulation"; Key = "Checksum"; KeyValue = simulation.Checksum |> Checksum.value }
         | File file -> { Label = "File"; Key = "Checksum"; KeyValue = file.Checksum |> Checksum.value }
-        | Grid grid -> { Label = "Grid"; Key = "Checksum"; KeyValue = grid.Checksum |> Checksum.value }
-        | AirPressureInput input -> { Label = "AirPressureInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | Grid grid -> { Label = "Grid"; Key = "Checksum"; KeyValue = grid.Checksum |> Checksum.value }
+        // | AirPressureInput input -> { Label = "AirPressureInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
         | FVCOMInput input -> { Label = "FVCOMInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | GridCoordinatesInput input -> { Label = "GridCoordinatesInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | HeatingInput input -> { Label = "HeatingInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | GridCoordinatesInput input -> { Label = "GridCoordinatesInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | HeatingInput input -> { Label = "HeatingInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
         | IOInput input -> { Label = "IOInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | NetCDFInput input -> { Label = "NetCDFInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | OBCElevationInput input -> { Label = "OBCElevationInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | OBCNodeListInput input -> { Label = "OBCNodeListInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | PrecipitationInput input -> { Label = "PrecipitationInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | RiverInput input -> { Label = "RiverInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | StartupInput input -> { Label = "StartupInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | StartupXInput input -> { Label = "StartupXInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | WaveInput input -> { Label = "WaveInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
-        | WindInput input -> { Label = "WindInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | NetCDFInput input -> { Label = "NetCDFInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | OBCElevationInput input -> { Label = "OBCElevationInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | OBCNodeListInput input -> { Label = "OBCNodeListInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | PrecipitationInput input -> { Label = "PrecipitationInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | RiverInput input -> { Label = "RiverInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | StartupInput input -> { Label = "StartupInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | StartupXInput input -> { Label = "StartupXInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | WaveInput input -> { Label = "WaveInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
+        // | WindInput input -> { Label = "WindInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
 
 let getAllNodes () =
     let result =

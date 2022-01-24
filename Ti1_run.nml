@@ -166,7 +166,7 @@
 
  &NML_PHYSICS
  HORIZONTAL_MIXING_TYPE  = 'closure',
- HORIZONTAL_MIXING_FILE  = 'none',
+ HORIZONTAL_MIXING_FILE  = 'Ti1_phm.nc',
  HORIZONTAL_MIXING_KIND  = 'constant',
  HORIZONTAL_MIXING_COEFFICIENT   =  0.100000    ,
  HORIZONTAL_PRANDTL_NUMBER       =  0.100000    ,
@@ -175,7 +175,7 @@
  VERTICAL_PRANDTL_NUMBER =  1.000,
  BOTTOM_ROUGHNESS_TYPE   = 'orig', 
  BOTTOM_ROUGHNESS_KIND   = 'constant',
- BOTTOM_ROUGHNESS_FILE   = 'none',
+ BOTTOM_ROUGHNESS_FILE   = 'Ti1_pbr.nc',
  BOTTOM_ROUGHNESS_LENGTHSCALE    =  0.001,
  BOTTOM_ROUGHNESS_MINIMUM        =  0.0025,
  CONVECTIVE_OVERTURNING  = F,
@@ -208,17 +208,17 @@
  OBC_ELEVATION_FILE      = 'tf3d1_jul_el_obc.nc',
  OBC_TS_TYPE     =          3,
  OBC_TEMP_NUDGING        = F,
- OBC_TEMP_FILE   = 'none',
+ OBC_TEMP_FILE   = 'Ti1_obc_temp.nc',
  OBC_TEMP_NUDGING_TIMESCALE      =  0.0000000E+00,
  OBC_SALT_NUDGING     = F,
- OBC_SALT_FILE   = 'none'   ,
+ OBC_SALT_FILE   = 'Ti1_obc_salt.nc'   ,
  OBC_SALT_NUDGING_TIMESCALE      =  0.0000000E+00,
  OBC_MEANFLOW    = F,
- OBC_MEANFLOW_FILE       = 'none'  ,
+ OBC_MEANFLOW_FILE       = 'Ti1_obc_meanflow.nc'  ,
  OBC_TIDEOUT_INITIAL     =           0,
  OBC_TIDEOUT_INTERVAL    =           0,
  OBC_LONGSHORE_FLOW_ON   = F,
- OBC_LONGSHORE_FLOW_FILE = 'none'                                                                   
+ OBC_LONGSHORE_FLOW_FILE = 'Ti1_obc_longshore_flow.nc'                                                                   
  /
  &NML_GRID_COORDINATES
  GRID_FILE       = 'Ti1_grd.dat',
@@ -240,39 +240,39 @@
  GROUNDWATER_TEMP_ON     = F,
  GROUNDWATER_SALT_ON     = F,
  GROUNDWATER_KIND        = 'none'                        ,
- GROUNDWATER_FILE        = 'none'                                                                ,
+ GROUNDWATER_FILE        = 'Ti1_groundwater.nc'                                                                ,
  GROUNDWATER_FLOW        =  0.0000000E+00,
  GROUNDWATER_TEMP        =  0.0000000E+00,
  GROUNDWATER_SALT        =  0.0000000E+00
  /
  &NML_LAG
  LAG_PARTICLES_ON        = F,
- LAG_START_FILE  = 'none',
- LAG_OUT_FILE    = 'none',
+ LAG_START_FILE  = 'Ti1_lag_start.nc',
+ LAG_OUT_FILE    = 'Ti1_lag_out.nc',
  LAG_FIRST_OUT   = 'none',
- LAG_RESTART_FILE        = 'none',
+ LAG_RESTART_FILE        = 'Ti1_lag_restart.nc',
  LAG_OUT_INTERVAL        = 'none'                           ,
  LAG_SCAL_CHOICE = 'none'                                                                            
  /
  &NML_ADDITIONAL_MODELS
  DATA_ASSIMILATION       = F,
- DATA_ASSIMILATION_FILE  = 'none'                                                                 ,
+ DATA_ASSIMILATION_FILE  = 'Ti1_am_a.nc'                                                                 ,
  BIOLOGICAL_MODEL        = F,
  FABM_MODEL = F,
  STARTUP_BIO_TYPE        = 'observed'                                              ,
  SEDIMENT_MODEL  = T,
  SEDIMENT_MODEL_FILE     = 'gen_sed4.inp'                            ,
  SEDIMENT_PARAMETER_TYPE = 'uniform'                            ,
- SEDIMENT_PARAMETER_FILE = 'none'                            ,
+ SEDIMENT_PARAMETER_FILE = 'Ti1_am_sp.nc'                            ,
  BEDFLAG_TYPE    = 'constant'                             ,
- BEDFLAG_FILE    = 'none'                            ,
+ BEDFLAG_FILE    = 'Ti1_am_b.nc'                            ,
  ICING_MODEL     = F,
- ICING_FORCING_FILE      = 'none'                            ,
+ ICING_FORCING_FILE      = 'Ti1_am_if1.nc'                            ,
  ICING_FORCING_KIND      = 'variable'                        ,
  ICING_AIR_TEMP  =  0.0000000E+00,
  ICING_WSPD      =  0.0000000E+00,
  ICE_MODEL       = F,
- ICE_FORCING_FILE        = 'none'                            ,
+ ICE_FORCING_FILE        = 'Ti1_am_if2.nc'                            ,
  ICE_FORCING_KIND        = 'none'                        ,
  ICE_SEA_LEVEL_PRESSURE  =  0.0000000E+00,
  ICE_AIR_TEMP    =  0.0000000E+00,
@@ -286,7 +286,7 @@
  &NML_PROBES
  PROBES_ON       = F,
  PROBES_NUMBER   =           0,
- PROBES_FILE     = 'none'                                                        
+ PROBES_FILE     = 'Ti1_probes.nc'                                                        
  /
  &NML_BOUNDSCHK
  BOUNDSCHK_ON    = F,
@@ -301,7 +301,7 @@
  &NML_NCNEST
  NCNEST_ON       = F,
  NCNEST_BLOCKSIZE        =          100,
- NCNEST_NODE_FILES       = 'none'                                                                                                      
+ NCNEST_NODE_FILES       = 'Ti1_ncnest_node.nc'                                                                                                      
                                                        ,
  NCNEST_OUT_INTERVAL     = 'days=1.0 '                           
  /
@@ -314,7 +314,7 @@
  /
  &NML_STATION_TIMESERIES
  OUT_STATION_TIMESERIES_ON       = F,
- STATION_FILE    = 'none'                                                                          ,
+ STATION_FILE    = 'Ti1_station.nc'                                                                          ,
  LOCATION_TYPE   = 'cell'                                                                ,
  OUT_ELEVATION   = F,
  OUT_VELOCITY_3D = F,
