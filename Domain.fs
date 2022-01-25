@@ -97,56 +97,16 @@ module FileType =
         Ok (FileType str)
   let value format = match format with | FileType f -> f
 
-type Simulation = {
-  Checksum: Checksum
-}
-type Grid = {
-  Checksum: Checksum
-  NodeNumber: NodeNumber
-}
-
 type File = {
   Path: Path
   Name: Name
   Format: Format
   Checksum: Checksum
-  // Type: FileType
 }
 
 type FileWithConfigTypeOnly = {
   ConfigType: FileType
   File: InputFile
-}
-
-// Input from Config
-type AdditionalModelsDataAssimilationInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
-type AdditionalModelsSedimentModelInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type AdditionalModelsBedflagInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type AdditionalModelsIcingForcingInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
-type AdditionalModelsIceForcingInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
-
-type AirPressureInput = {
-  ConfigType: InputType
-  File: InputFile
-  Kind: InputKind
 }
 
 type FVCOMInput = {
@@ -158,203 +118,22 @@ type FVCOMInput = {
   TimeZone: FVCOMInput.TimeZone
 }
 
-type GridCoordinatesInput = {
-  ConfigType: InputType
-  File: InputFile
-  FileUnits: GridCoordinatesInput.FileUnits
-}
-
-type GridCoriolisInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type GridDepthInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type GridSigmaLevelsInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type GridSpongeInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
-type GroundwaterInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
-type HeatingInput = {
-  ConfigType: InputType
-  File: InputFile
-  Type: InputType
-}
-
-type HeatingCalculateInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
 type IOInput = {
   ConfigType: InputType
   InputDirectory: IOInput.InputDirectory
   OutputDirectory: IOInput.OutputDirectory
 }
 
-type LagStartInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type LagOutInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type LagRestartInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type NcnestNodeInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type NestingFileInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type NestingStationInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
-type NetCDFInput = {
-  ConfigType: InputType
-  FirstOut: NetCDFInput.FirstOut
-  OutInterval: NetCDFInput.OutInterval
-  OutputStack: NetCDFInput.OutputStack
-}
-
-type OBCElevationInput = {
-  ConfigType: InputType
-  ElevationFile: OBCElevationInput.ElevationFile
-}
-
-type OBCLongshoreFlowInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type OBCMeanFlowInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
-type OBCNodeListInput = {
-  ConfigType: InputType
-  NodeListFile: OBCNodeListInput.NodeListFile
-}
-
-type OBCSaltInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type OBCTempInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type PhysicsHorizontalMixingInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type PhysicsBottomRoughnessInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-
-type ProbesInput = {
-  ConfigType: InputType
-  File: InputFile
-}
-type PrecipitationInput = {
-  ConfigType: InputType
-  File: InputFile
-  Kind: InputKind
-}
-
-type RiverInput = {
-  ConfigType: InputType
-  InfoFile: RiverInput.InfoFile
-  Number: RiverInput.Number
-  Kind: InputKind
-}
-
-type StartupInput = {
-  ConfigType: InputType
-  File: InputFile
-  Type: InputType
-}
-
-type StartupXInput = {
-  ConfigType: InputType
-  File: InputFile
-  Type: InputType
-}
-
-type WaveInput = {
-  ConfigType: InputType
-  File: InputFile
-  Kind: InputKind
-}
-type WindInput = {
-  ConfigType: InputType
-  File: InputFile
-  Type: InputType
+type Simulation = {
+  Checksum: Checksum
 }
 
 type Node = 
   | File of File
   | ConfigFileInput of FileWithConfigTypeOnly
-  // | Grid of Grid
   | Simulation of Simulation
-
-  // | AdditionalModelsDataAssimilationInput of AdditionalModelsDataAssimilationInput
-  // | AdditionalModelsSedimentModelInput of AdditionalModelsSedimentModelInput
-  // | AdditionalModelsBedflagInput of AdditionalModelsBedflagInput
-  // | AdditionalModelsIcingForcingInput of AdditionalModelsIcingForcingInput
-  // | AdditionalModelsIceForcingInput of AdditionalModelsIceForcingInput
-  // | AirPressureInput of AirPressureInput
   | FVCOMInput of FVCOMInput
-  // | GridCoordinatesInput of GridCoordinatesInput
-  // | GridCoriolisInput of GridCoriolisInput
-  // | GridDepthInput of GridDepthInput
-  // | GridSigmaLevelsInput of GridSigmaLevelsInput
-  // | GridSpongeInput of GridSpongeInput
-  // | GroundwaterInput of GroundwaterInput
-  // | HeatingInput of HeatingInput
-  // | HeatingCalculateInput of HeatingCalculateInput
   | IOInput of IOInput
-  // | LagStartInput of LagStartInput
-  // | LagOutInput of LagOutInput
-  // | LagRestartInput of LagRestartInput
-  // | NcnestNodeInput of NcnestNodeInput
-  // | NestingInput of NestingFileInput
-  // | NestingStationInput of NestingStationInput
-  // | NetCDFInput of NetCDFInput
-  // | OBCElevationInput of OBCElevationInput
-  // | OBCLongshoreFlowInput of OBCLongshoreFlowInput
-  // | OBCMeanFlowInput of OBCMeanFlowInput
-  // | OBCNodeListInput of OBCNodeListInput
-  // | OBCSaltInput of OBCSaltInput
-  // | OBCTempInput of OBCTempInput
-  // | PhysicsHorizontalMixingInput of PhysicsHorizontalMixingInput
-  // | PhysicsBottomRoughnessInput of PhysicsBottomRoughnessInput
-  // | ProbesInput of ProbesInput
-  // | PrecipitationInput of PrecipitationInput
-  // | RiverInput of RiverInput
-  // | StartupInput of StartupInput
-  // | StartupXInput of StartupXInput
-  // | WaveInput of WaveInput
-  // | WindInput of WindInput
 
 let getChecksumListArrayFromNodes (nodes: list<Node>)= 
   nodes
@@ -370,8 +149,7 @@ let getChecksumListArrayFromNodes (nodes: list<Node>)=
           | _ -> Some (sprintf "%s-%s" checksum fileName)
       | _ ->  None
   )
-  |> Array.filter Option.isSome
-  |> Array.map Option.get
+  |> Array.choose id
 
 let getFileName (file: File) =
     let (Name fileName) = file.Name

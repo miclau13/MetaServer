@@ -112,6 +112,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // Next, get the input files 
                 let inputFilesWithType = Input.getExistingInputFiles inputDirectory nodes
                 let inputFiles = inputFilesWithType |> List.map (fun item -> item.Node)
+                printfn "inputFiles: %A" inputFiles
                 // Side effect: Create the files node in DB
                 Neo4j.createMultipleNodesIfNotExist inputFiles
 
@@ -144,7 +145,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 // Side effect: Create the input config file node in DB
                 Neo4j.createSingleNodeIfNotExist inputConfigFileNode
-
+                printfn "inputConfigFileNode: %A" inputConfigFileNode
                 let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
                 // Side effect: Create the relationship node in DB
                 Neo4j.createSingleNodeIfNotExist simulationNode
