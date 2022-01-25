@@ -79,7 +79,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             let targetDirectoryArgs = runArgs.GetResult(TargetDirectory, Some "data")
             let targetDirectory = defaultArg targetDirectoryArgs "data"
 
-            // TODO targetDirectory -> target
             let outputSourceFullPath = { BasePath = basePath ; RelativePath = outputSourceDirectory }
             let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
 
@@ -112,7 +111,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // Next, get the input files 
                 let inputFilesWithType = Input.getExistingInputFiles inputDirectory nodes
                 let inputFiles = inputFilesWithType |> List.map (fun item -> item.Node)
-                printfn "inputFiles: %A" inputFiles
                 // Side effect: Create the files node in DB
                 Neo4j.createMultipleNodesIfNotExist inputFiles
 
@@ -145,7 +143,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 // Side effect: Create the input config file node in DB
                 Neo4j.createSingleNodeIfNotExist inputConfigFileNode
-                printfn "inputConfigFileNode: %A" inputConfigFileNode
+
                 let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
                 // Side effect: Create the relationship node in DB
                 Neo4j.createSingleNodeIfNotExist simulationNode
@@ -236,9 +234,8 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // End of creating directory for the calculation
                 Ok ()
             | Error e -> 
-                let errorMessage = sprintf "E: %A" e
-                printfn "E: %A" errorMessage
-                failwith "Input parsing failed"
+                let errorMessage = sprintf "Input parsing failed: %A" e
+                failwith errorMessage
             // Ok ()
         with 
             ex -> 

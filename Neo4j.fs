@@ -218,14 +218,12 @@ let getClientWithSetStr (str: string) (client: Cypher.ICypherFluentQuery)   =
 // 8/11/2021
 let getClientWithNodeInputParameter (node: Node) (paramName: string) (client: Cypher.ICypherFluentQuery) = 
     let nodeDto = fromDomain node
-    // TODO: make it better?
     match nodeDto with 
     | FileDto dto -> client.WithParam(paramName, dto)
     | ConfigFileInputDto dto -> client.WithParam(paramName, dto)
     | IOInputDto dto -> client.WithParam(paramName, dto)
     | FVCOMInputDto dto -> client.WithParam(paramName, dto)
     | SimulationDto dto -> client.WithParam(paramName, dto)
-    // client.WithParam(paramName, nodeDto)
 
 let getNodeAttributes (node: Node) = 
     match node with
@@ -262,7 +260,6 @@ let getReducedMergeQueryStr (strList: string list) =
 
 let createNodesIfNotExist (nodes: Node list) =
     let queriesForNodes = List.mapi convertNodeToQueryStr nodes
-    printfn "createNodesIfNotExist queriesForNodes: %A " queriesForNodes
     let clientWithSetStrAndParam = 
         List.fold (
             fun acc (mergeStr, index, node, nodeKeyValue) -> 

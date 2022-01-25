@@ -180,7 +180,7 @@ let copyFile (sourceBasePath: string, sourceDirectory: string) (targetFullPath: 
         if checkIfFileExist targetPath then
             printfn "File with path (%s) already exists, no need to copy file again." targetPath
         else
-            File.Copy(sourcePath, targetPath, true)
+            File.Copy(sourcePath, targetPath)
             printfn "%s --- copied to ---> %s" sourcePath targetPath
     else 
         printfn "Target Dir (%s) does not exist, could not copy file to there" targetDir
@@ -191,8 +191,7 @@ let copyFile (sourceBasePath: string, sourceDirectory: string) (targetFullPath: 
 
 let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: string) (inputFiles: list<Domain.Node>)  = 
     inputFiles
-    |> Array.ofList
-    |> Array.Parallel.iter (fun item -> 
+    |> List.iter (fun item -> 
         match item with 
         | Domain.File f -> 
             let fullPathInfo = { BasePath = basePath ; RelativePath = outputDirectory }
