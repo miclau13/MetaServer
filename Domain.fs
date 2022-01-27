@@ -144,7 +144,7 @@ let getChecksumListArrayFromNodes (nodes: list<Node>)=
           let (Checksum checksum) = f.Checksum
           let (Name fileName) = f.Name
           match fileName with 
-          | Util.RegexGroup "(\w{40}-)(.*)" 0 fileName -> 
+          | Util.RegexGroup Util.FileWithChecksumRegex 0 fileName -> 
             Some (fileName)
           | _ -> Some (sprintf "%s-%s" checksum fileName)
       | _ ->  None

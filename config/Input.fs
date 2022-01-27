@@ -34,7 +34,7 @@ let getInputFileResult (fileName: string) (inputDirectory: string) (fileType: st
         // If input is in nc format, check if it has checksum in its file name
         // If yes then use the checksum directly, otherwise generate checksum 
         match name with 
-        | Util.RegexGroup "(\w{40}-)(.*)" 0 name  -> 
+        | Util.RegexGroup FileWithChecksumRegex 0 name  -> 
           name
         | _ -> getChecksumFromFile fileLocation
       let file = File {
@@ -68,21 +68,15 @@ let initOutputFileNodes (files: IO.FileInfo []) (dir: string) =
   let fileNodes = 
     Array.Parallel.map (fun (file: IO.FileInfo) -> 
       let fileName = file.Name
-      let name = (fileName.Split [|'.'|]).[0]
-      let format = (fileName.Split [|'.'|]).[1]
-      // let fileLocation = sprintf "%s%s" dir fileName
-      let checksum = 
-        // use file name as the checksum
-        name
-        // getChecksum fileName
+      let (name, format) = getFileNameAndFormat fileName
+      // use file name as the checksum
+      let checksum = name
       let result = File {
           Path = Path dir
           Name = Name name
           Format = Format format
           Checksum = Checksum (checksum)
-          // Type = FileType "File"
       }
-      // printfn "initOutputFileNodes result: %A" result
       result
     ) files
     |> List.ofArray

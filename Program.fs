@@ -34,9 +34,9 @@ and InitArgs =
             match this with
             | All -> "Init all."
             | Config _ -> "Read the config."
-            | BasePath _ -> "Specifiy the base path."
-            | InputSourceDirectory _ -> "Specify the input source directiory."
-            | OutputSourceDirectory _ -> "Specify the output source directiory."
+            | BasePath _ -> "Specify the base path."
+            | InputSourceDirectory _ -> "Specify the input source directory."
+            | OutputSourceDirectory _ -> "Specify the output source directory."
             | TargetDirectory _ -> "Specify the target directory."
             | CleanAll _ -> "Clean all previous nodes."
 
@@ -53,7 +53,7 @@ and ListArgs =
         member this.Usage =
             match this with
             | All -> "List all Grids."
-            | Label _ -> "Find the corresping nodes with the <label>."
+            | Label _ -> "Find the corresponding nodes with the <label>."
             | Relationship _ -> "Find the Relationship of the node."
             | Checksum _ -> "List the node by <checksum>."
             | MaxPathLength _ -> "Specify maximum the path length."
@@ -62,7 +62,7 @@ and ListArgs =
 
 let runInit (runArgs: ParseResults<InitArgs>) =
     match runArgs with
-    | argz when argz.Contains(Config) ->
+    | args when args.Contains(Config) ->
         // Get the config
         let configArgs = runArgs.GetResult(Config)
         try
@@ -75,7 +75,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             // Get the output source directory if any
             let outputSourceDirectoryArgs = runArgs.GetResult(OutputSourceDirectory, Some "output")
             let outputSourceDirectory = defaultArg outputSourceDirectoryArgs "output"
-            // Get the ouput directory if any
+            // Get the output directory if any
             let targetDirectoryArgs = runArgs.GetResult(TargetDirectory, Some "data")
             let targetDirectory = defaultArg targetDirectoryArgs "data"
 
@@ -86,7 +86,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             // Get the content from the config file
             let configContent = IO.File.ReadAllText configArgs
             // Run the parser on the config file
-            let configContentResult = Parser.textWithoutSpaces configContent
+            let configContentResult = parseContent configContent
 
             match configContentResult with
             | Ok r ->
@@ -101,7 +101,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     |> Array.toList
 
                 // Delete All Previous Nodes if specified
-                let shouldCleanAll = argz.Contains(CleanAll)
+                let shouldCleanAll = args.Contains(CleanAll)
                 if shouldCleanAll then
                     Neo4j.deleteAllNodes()
 
@@ -128,13 +128,12 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let outputDirToBeConverted = Input.convertConfigFileIOText inputConfigFileOutputDirectory "./output/"
                 let inputFilesAndIODirToBeConverted = inputFilesToBeConverted@[inputDirToBeConverted ; outputDirToBeConverted]
                 let convertedConfigText = Input.convertConfigFileText configContent inputFilesAndIODirToBeConverted
-                let inputConfigChecksum = Util.getChecksum convertedConfigText
+                let inputConfigChecksum = getChecksum convertedConfigText
                 let inputConfigFileType = "Input Config"
                 createInputConfigFile (convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) targetFullPath
                 
-                let inputConifgChecksumFileInfo = { FileName = configArgs; Checksum = inputConfigChecksum }
-                // let treeDirectoryFullPathInfo = { BasePath = basePath ; RelativePath = targetDirectory }
-                let { FileDirFullPath = inputConfigFileTargetDir } = getFilePathInfo targetFullPath inputConifgChecksumFileInfo
+                let inputConfigChecksumFileInfo = { FileName = configArgs; Checksum = inputConfigChecksum }
+                let { FileDirFullPath = inputConfigFileTargetDir } = getFilePathInfo targetFullPath inputConfigChecksumFileInfo
                 let inputConfigFileNameWithChecksum = getChecksumFileName inputConfigChecksum configArgs
                 let inputConfigFileNode = 
                     Input.getInputFileResult inputConfigFileNameWithChecksum inputConfigFileTargetDir inputConfigFileType
@@ -154,11 +153,10 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                         fun (item: Input.InputFile) -> 
                             let inputFile = item.Node
                             let relationship = item.Type
-                            let relationshipProps = Some (Dto.HasInputDTO ({ Type = relationship }))
+                            let relationshipProps = Some (Dto.HasInputDTO { Type = relationship })
                             { SourceNode = simulationNode ; TargetNode = inputFile ; Relationship = "HAS_INPUT" ; RelationshipProps = relationshipProps }
                     ) inputFilesWithType
 
-                // let inputConfigFileRelationshipProps = Some (Dto.HasInputDTO ({ Type = inputConfigFileType }))
                 let inputConfigFileRelationshipInfo: Neo4j.RelationShipInfo = 
                     { SourceNode = simulationNode ; TargetNode = inputConfigFileNode ; Relationship = "HAS_INPUT_CONFIG" ; RelationshipProps = None }
 
@@ -166,7 +164,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 // Start dealing with tree file
                 let commitsChecksum = inputFiles |> Domain.getChecksumListArrayFromNodes
-                let (_, checksumStr) = getChecksumInfoFromChecksumArray commitsChecksum
+                let _, checksumStr = getChecksumInfoFromChecksumArray commitsChecksum
                 let treeFileType = "Tree"
                 let treeFileName = getTreeFileName
                 // Side effect: create the tree file
@@ -228,18 +226,17 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
 
                 let simulationInputFiles = inputConfigFileNode::inputFiles
-                // printfn "targetOutputFullPath: %s" targetOutputFullPath
                 createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFileNodes, targetOutputFullPath)
                 
                 // End of creating directory for the calculation
                 Ok ()
             | Error e -> 
-                let errorMessage = sprintf "Input parsing failed: %A" e
+                let errorMessage = $"Input parsing failed: %A{e}"
                 failwith errorMessage
             // Ok ()
         with 
             ex -> 
-                printfn "%s" ex.Message
+                printfn $"%s{ex.Message}"
                 Error ArgumentsNotSpecified
     | _ ->
         Neo4j.deleteAllNodes()
@@ -247,44 +244,44 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
 let runList (runArgs: ParseResults<ListArgs>) =
     match runArgs with
-    | argz when argz.Contains(All) ->
+    | args when args.Contains(All) ->
         let result = Neo4j.getAllNodes ()
-        printfn "Result: %A " result
+        printfn $"Result: %A{result} "
         Ok ()
-    | argz when argz.Contains(Label) ->
+    | args when args.Contains(Label) ->
         // Get the label
         let labelArgs = runArgs.GetResult(Label)
         // Get the nodes with specific label
         let result = Neo4j.getNodesByLabel(labelArgs)
-        printfn "Result: %A " result
+        printfn $"Result: %A{result} "
         Ok ()
-    | argz when (argz.Contains(Relationship) && argz.Contains(Checksum)) ->
+    | args when (args.Contains(Relationship) && args.Contains(Checksum)) ->
         // Get the relationship and checksum
         let checksum = runArgs.GetResult(Checksum)
         // Get the nodes with specific relationship
         let relationship = runArgs.GetResult(Relationship)
         // Get the maximum path length if any
         let maxPathLength = 
-            match argz.Contains(MaxPathLength) with
-            | true -> sprintf "*..%s" (runArgs.GetResult(MaxPathLength))
+            match args.Contains(MaxPathLength) with
+            | true -> $"*..%s{runArgs.GetResult(MaxPathLength)}"
             | false -> "*"
         let result = Neo4j.getRelatedNodesPath((relationship, checksum, maxPathLength))
-        printfn "%A" result
+        printfn $"%A{result}"
         Ok ()
-    | argz when argz.Contains(Relationship) ->
+    | args when args.Contains(Relationship) ->
         // Get the relationship
         let relationship = runArgs.GetResult(Relationship)
         match relationship with
         | Some r -> 
             // Get the relationship properties if any
-            match argz.Contains(RelationshipProperty) with
+            match args.Contains(RelationshipProperty) with
             | true -> 
                 let relationshipProperty = runArgs.GetResult(RelationshipProperty)
-                match argz.Contains(RelationshipPropertyValue) with
+                match args.Contains(RelationshipPropertyValue) with
                 | true -> 
                     let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
                     let result = Neo4j.getRelationships(r, Some relationshipProperty, Some relationshipPropertyValue)
-                    printfn "%A" result
+                    printfn $"%A{result}"
                     Ok ()
                     // sprintf "*..%s" (runArgs.GetResult(RelationshipProperty))
                 | false ->
@@ -293,19 +290,19 @@ let runList (runArgs: ParseResults<ListArgs>) =
             | false ->
                 // let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
                 let result = Neo4j.getRelationships(r, None, None)
-                printfn "%A" result
+                printfn $"%A{result}"
                 Ok ()
         | None -> 
             let result = Neo4j.getAllRelationship()
             for i in result do
-                printfn "%s" i
+                printfn $"%s{i}"
             Ok ()
-    | argz when argz.Contains(Checksum) ->
+    | args when args.Contains(Checksum) ->
         // Get the node
         let checksum = runArgs.GetResult(Checksum)
         // Get the nodes with specific checksum
         let result = Neo4j.getNodeByChecksum(checksum)
-        printfn "%A" result
+        printfn $"%A{result}"
         Ok ()
     | _ -> 
         printfn "%s" "No argument provided"
@@ -319,7 +316,7 @@ let getExitCode result =
         | ArgumentsNotSpecified -> 1
 
 let runPrint print = 
-    printfn "%s" print
+    printfn $"%s{print}"
     Ok ()
 
 [<EntryPoint>]
@@ -332,6 +329,6 @@ let main argv =
     | p when p.Contains(List) -> runList (p.GetResult(List))
     | p when p.Contains(Init) -> runInit (p.GetResult(Init))
     | _ ->
-        printfn "%s" (parser.PrintUsage())
+        printfn $"%s{parser.PrintUsage()}"
         Error ArgumentsNotSpecified
     |> getExitCode

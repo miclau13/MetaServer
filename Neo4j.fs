@@ -60,12 +60,12 @@ let getNodeLabel (node: Node) =
 
 // 10/11/2021
 let getDataInDomainFormat<'T> (node: string) =
-    Json.deserialize<'T> (node)
+    Json.deserialize<'T> node
 
 // 9/11/2021
 let toListInDomainFormat (nodes: seq<string * seq<string>>) = 
     nodes 
-    |> Seq.map (fun (dto) -> 
+    |> Seq.map (fun dto -> 
         dto |> NodeDto.toDomain
     ) 
     |> List.ofSeq
@@ -73,28 +73,28 @@ let toListInDomainFormat (nodes: seq<string * seq<string>>) =
 // 18/11/2021 & 19/11/2021
 let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cypher.PathsResultBolt>) = 
     pathResultSeq
-    |> Seq.map (fun (pathResult) ->
+    |> Seq.map (fun pathResult ->
         let relationships = pathResult.Relationships
         let nodes = pathResult.Nodes
-        let nodedIdToNodeMap = 
-            Seq.fold (fun (acc: Map<int64, Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltNode>) (node: Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltNode) -> acc.Add (node.Id, node)) (Map.empty) nodes
+        let nodeIdToNodeMap = 
+            Seq.fold (fun (acc: Map<int64, Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltNode>) (node: Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltNode) -> acc.Add (node.Id, node)) Map.empty nodes
         Seq.fold (fun acc (relationship: Neo4jClient.ApiModels.Cypher.PathsResultBolt.PathsResultBoltRelationship) ->
             let startNodeId = relationship.StartNodeId
             let endNodeId = relationship.EndNodeId
             let relationshipType = relationship.Type
-            let startNode = nodedIdToNodeMap.Item startNodeId
-            let endNode = nodedIdToNodeMap.Item endNodeId
+            let startNode = nodeIdToNodeMap.Item startNodeId
+            let endNode = nodeIdToNodeMap.Item endNodeId
             match direction with
             | "TO" -> 
                 if acc = "" then
-                    sprintf "NodeId:%i(%s) <-----%s----- NodeId:%i(%s)" endNodeId (Seq.reduce (+) endNode.Labels) relationshipType startNodeId (Seq.reduce (+) startNode.Labels)
+                    $"NodeId:%i{endNodeId}(%s{Seq.reduce (+) endNode.Labels}) <-----%s{relationshipType}----- NodeId:%i{startNodeId}(%s{Seq.reduce (+) startNode.Labels})"
                 else 
-                    sprintf "%s <-----%s----- NodeId:%i(%s)" acc relationshipType startNodeId (Seq.reduce (+) startNode.Labels)
+                    $"%s{acc} <-----%s{relationshipType}----- NodeId:%i{startNodeId}(%s{Seq.reduce (+) startNode.Labels})"
             | "FROM" -> 
                 if acc = "" then
-                    sprintf "NodeId:%i(%s) -----%s-----> NodeId:%i(%s)" startNodeId (Seq.reduce (+) startNode.Labels) relationshipType endNodeId (Seq.reduce (+) endNode.Labels)
+                    $"NodeId:%i{startNodeId}(%s{Seq.reduce (+) startNode.Labels}) -----%s{relationshipType}-----> NodeId:%i{endNodeId}(%s{Seq.reduce (+) endNode.Labels})"
                 else 
-                    sprintf "%s -----%s-----> NodeId:%i(%s)" acc relationshipType endNodeId (Seq.reduce (+) endNode.Labels)
+                    $"%s{acc} -----%s{relationshipType}-----> NodeId:%i{endNodeId}(%s{Seq.reduce (+) endNode.Labels})"
             | _ -> ""
         ) "" relationships 
     ) 
@@ -103,8 +103,8 @@ let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cyph
 // 22/11/2021
 let getRelationshipAttributes (relationship: RelationshipDto) = 
     match relationship with
-        | HasInputDTO v -> sprintf "{ Type: '%s' }" v.Type
-        | FileLocationIsDTO v -> sprintf "{ BasicPath: '%s' }" v.BasicPath
+        | HasInputDTO v -> $"{{ Type: '%s{v.Type}' }}"
+        | FileLocationIsDTO v -> $"{{ BasicPath: '%s{v.BasicPath}' }}"
         | HasOutputDTO -> sprintf "{ }"
         | HasTreeDTO -> sprintf "{ }"
         | HasInputConfigDTO -> sprintf "{ }"
@@ -116,15 +116,14 @@ let getRelationships (relationship: string, relationshipProperty: string option,
         | Some p -> 
             match relationshipPropertyValue with 
             | Some pv -> sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship p pv
-            | None -> sprintf "p = (node)<-[relationship:%s]-(targetNode)" relationship
+            | None -> $"p = (node)<-[relationship:%s{relationship}]-(targetNode)"
         | None -> sprintf "p = (node)<-[relationship:%s]-(targetNode)" relationship
-    let result =
-        clientWithCypher.Match(queryMatchTo)
-            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
-            .ResultsAsync
-        |> Async.AwaitTask |> Async.RunSynchronously 
-    // for i in result do
-    //     printfn "result: %s" i
+
+    clientWithCypher.Match(queryMatchTo)
+        .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
+        .ResultsAsync
+    |> Async.AwaitTask |> Async.RunSynchronously
+    |> ignore
     let resultTo =
         clientWithCypher.Match(queryMatchTo)
             .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
@@ -301,12 +300,10 @@ let relateNodes (sourceNode': Node) (targetNode': Node) (relationship: string) (
             let relationshipAttributes = getRelationshipAttributes(p)
             sprintf "(sourceNode)-[:%s%s]->(targetNode)" relationship relationshipAttributes
         | None -> sprintf "(sourceNode)-[:%s]->(targetNode)" relationship
-    // printfn "relationshipProperty: %A" relationshipProperty
-    // printfn "queryRelationship: %A" queryRelationship
     clientWithCypher
         .Match(querySource, queryTarget)
-        .Where(fun (sourceNode) -> sourceNode.Checksum = sourceNodeAttributes.KeyValue)
-        .AndWhere(fun (targetNode) -> targetNode.Checksum = targetNodeAttributes.KeyValue)
+        .Where(fun sourceNode -> sourceNode.Checksum = sourceNodeAttributes.KeyValue)
+        .AndWhere(fun targetNode -> targetNode.Checksum = targetNodeAttributes.KeyValue)
         .Create(queryRelationship)
         .ExecuteWithoutResultsAsync()
     |> Async.AwaitTask |> Async.RunSynchronously
@@ -316,7 +313,7 @@ let deleteNode (node: Node) =
     let query = sprintf "(node:%s)" nodeAttributes.Label
     clientWithCypher
         .Match(query)
-        .Where(fun (node) -> node.Checksum = nodeAttributes.KeyValue)
+        .Where(fun node -> node.Checksum = nodeAttributes.KeyValue)
         .DetachDelete("node")
         .ExecuteWithoutResultsAsync()
     |> Async.AwaitTask |> Async.RunSynchronously
@@ -395,12 +392,12 @@ let createNodesRelationship (relationShipInfos: RelationShipInfo list)=
     let queriesForNodes = List.mapi convertRelationToQueryStr relationShipInfos
     let clientWithMatchParam = 
         List.fold (
-            fun (acc: Cypher.ICypherFluentQuery) (querySourceStr, queryTargetStr, queryRelationshipStr, index, sourceNodeName, sourceNodeKeyValue, targetNodeName, targetNodeKeyValue, relationship) -> 
+            fun (acc: Cypher.ICypherFluentQuery) (querySourceStr, queryTargetStr, _, _, _, _, _, _, _) -> 
                 acc.Match(querySourceStr, queryTargetStr)
         ) clientWithCypher queriesForNodes
     let clientWithCreateParam = 
         List.fold (
-            fun (acc: Cypher.ICypherFluentQuery) (querySourceStr, queryTargetStr, queryRelationshipStr, index, sourceNodeName, sourceNodeKeyValue, targetNodeName, targetNodeKeyValue, relationship) -> 
+            fun (acc: Cypher.ICypherFluentQuery) (_, _, queryRelationshipStr, _, _, _, _, _, _) -> 
                 acc.Create(queryRelationshipStr)
         ) clientWithMatchParam queriesForNodes
     clientWithCreateParam.ExecuteWithoutResultsAsync()

@@ -104,7 +104,7 @@ let isInputFileExisted (fullPathInfo: FullPathInfo) (file: File) =
 let isFileExisted (fullPathInfo: FullPathInfo) (inputFile: File)  = 
     let (Name fileName) = inputFile.Name
     match fileName with 
-    | RegexGroup "(\w{40}-)(.*)" 0 fileName  -> 
+    | RegexGroup FileWithChecksumRegex 0 fileName  -> 
         printfn "File already existed with name: %s" fileName 
         true
     | _ -> 

@@ -24,7 +24,7 @@ let lineWithoutSpaces line =
 
   result
 
-let textWithoutSpaces line = 
+let parseContent line = 
   let result = 
     run ((skipCharsTillString "&" false 1000000) >>. sepBy (many1CharsTill anyChar (next2CharsSatisfy (fun f s -> 
       (f = '/' && s ='\n') ) <|> eof) ) (pchar '/')) line 

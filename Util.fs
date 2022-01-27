@@ -35,19 +35,18 @@ let getChecksumInfoFromChecksumArray (checksums: string []) =
         |> getChecksum
     (checksum, checksumStr)
 
+let FileWithChecksumRegex = 
+    sprintf "(\w{40}-)(.*)"
+
 let getChecksumFileName (checksum: string) (fileName: string) = 
     match fileName with 
-    | RegexGroup "(\w{40}-)(.*)" 0 _  -> 
+    | RegexGroup FileWithChecksumRegex 0 _  -> 
         fileName
     | _ ->  sprintf "%s-%s" checksum fileName
 
 // Modified on 12 Jan - Use one directory level only
 let getChecksumDirFromChecksum (checksum: string) = 
     let directoryLevel1 = checksum.[0..1]
-    // let directoryLevel2 = checksum.[2..3]
-    // let fileName = checksum.[0..]
-    // let path = sprintf "/%s/" directoryLevel1 
-    // let path = directoryLevel1
     directoryLevel1
 
 let getSimulationDirectoryPath (checksum: string, caseTitle: string, timestamp: string) = 
