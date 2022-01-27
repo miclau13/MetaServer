@@ -129,8 +129,9 @@ let getFilesPath (fullPathInfo: FullPathInfo) (nodes: Node list) =
 
 let getTargetOutputFullPath (fullPathInfo: FullPathInfo) =
     let targetDirectoryFullPath = getFullPath fullPathInfo
-    let targetDirectoryWithOutputFullPath = Path.Combine(targetDirectoryFullPath, getTargetOutputDirectory)
-    targetDirectoryWithOutputFullPath
+//    let targetDirectoryWithOutputFullPath = Path.Combine(targetDirectoryFullPath, getTargetOutputDirectory)
+//    targetDirectoryWithOutputFullPath
+    targetDirectoryFullPath
 
 let getTargetOutputWithChecksumFullPath (fullPathInfo: FullPathInfo) (checksum: string) =
     let targetDirectoryWithOutputFullPath = getTargetOutputFullPath fullPathInfo
@@ -269,7 +270,6 @@ let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: str
 
     // Create symbolic link for the input files
     inputFilesWithPath
-    // |> Array.ofList
     |> List.iter (
         fun file -> 
             let fileFullPath, _, targetFileName = file
@@ -287,15 +287,18 @@ let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: str
     let fullPathInfo = { BasePath = basePath ; RelativePath = outputTargetDir }
     let outputFilesWithPath = getFilesPath fullPathInfo outputFiles
     outputFilesWithPath
-    // |> Array.ofList
     |> List.iter (
         fun file -> 
-            let fileFullPath, filePathWithChecksumDir, targetFileName = file
+            let fileFullPath, _, targetFileName = file
             let calDirWithBasePath = Path.Combine(basePath, getCalDirectory)
             let simDirWithBasePath = Path.Combine(calDirWithBasePath, simDir)
             let outputDirWithBasePath = Path.Combine(simDirWithBasePath, getTargetOutputDirectory)
             let symbolicLinkPath = Path.Combine(outputDirWithBasePath, targetFileName)
-            System.IO.File.CreateSymbolicLink(symbolicLinkPath, fileFullPath) |> ignore
+            if checkIfFileExist symbolicLinkPath then
+                printfn $"%s{symbolicLinkPath}--- symbolic link --->%s{fileFullPath} is already created, ignored"
+            else
+                System.IO.File.CreateSymbolicLink(symbolicLinkPath, fileFullPath) |> ignore
+                printfn $"%s{symbolicLinkPath}--- symbolic link --->%s{fileFullPath} is Created"
     )
 
 let updateTreeRelatedFiles (files: Node list) (fullPathInfo: FullPathInfo) (commitChecksum: string) = 

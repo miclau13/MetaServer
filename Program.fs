@@ -127,8 +127,11 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // Side effect [input config file]: Create the input config file in FS
                 createInputConfigFile (convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) targetFullPath
                 
+                let inputConfigChecksumFileInfo = { FileName = configArgs; Checksum = inputConfigChecksum }
+                let { FileDirFullPath = inputConfigFileTargetDir } = getFilePathInfo targetFullPath inputConfigChecksumFileInfo
+                let inputConfigFileNameWithChecksum = getChecksumFileName inputConfigChecksum configArgs
                 let inputConfigFileNode = 
-                    Input.getInputFileResult configArgs basePath inputConfigFileType
+                    Input.getInputFileResult inputConfigFileNameWithChecksum inputConfigFileTargetDir inputConfigFileType
                     |> Option.get
                     |> (fun item -> item.Node)
                   
@@ -171,15 +174,14 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 // Start dealing with output
                 // Get the target path by tree checksum
-                let targetOutputFullPath = getTargetOutputFullPath targetFullPath 
+                let targetOutputFullPath = getTargetOutputFullPath targetFullPath
                 let targetOutputWithChecksumFullPath = getTargetOutputWithChecksumFullPath targetFullPath inputConfigChecksum
-
                 // Side effect: copy output data to the target path
                 directoryCopy outputSourceFullPath targetOutputWithChecksumFullPath inputConfigChecksum false
 
                 // Get the source output data path 
-                let outputFiles = getAllFilesInDirectory targetOutputWithChecksumFullPath
-                let outputFileNodes = Input.initOutputFileNodes outputFiles targetOutputWithChecksumFullPath
+                let outputFiles = getAllFilesInDirectory outputSourceFullPath
+                let outputFileNodes = Input.initOutputFileNodes outputFiles targetOutputWithChecksumFullPath inputConfigChecksum
                 let outputRelationshipInfos: Neo4j.RelationShipInfo list = 
                     List.map (
                         fun file -> 
@@ -221,8 +223,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 
                 // Side effect [all]: Relate all the nodes with simulation in DB
                 Neo4j.relateMultipleNodes relationshipList
-                
-                
+               
                 Ok ()
             | Error e -> 
                 let errorMessage = $"Input parsing failed: %A{e}"

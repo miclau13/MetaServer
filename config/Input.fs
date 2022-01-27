@@ -63,16 +63,15 @@ let getProperty (str: string) (property: string) =
     | _ -> failwith $"Could not capture the string value (%s{str}) with property (%s{property}) by getFilePropertyRegex"
 
 // For output files 
-let initOutputFileNodes (files: FileInfo []) (dir: string) = 
+let initOutputFileNodes (files: FileInfo []) (dir: string) (inputConfigChecksum: string) = 
   let fileNodes = 
     Array.Parallel.map (fun (file: FileInfo) -> 
       let fileName = file.Name
       let name, format = getFileNameAndFormat fileName
-      // use file name as the checksum
-      let checksum = name
+      let checksum = getChecksumFileName inputConfigChecksum name
       let result = File {
           Path = Path dir
-          Name = Name name
+          Name = Name checksum
           Format = Format format
           Checksum = Checksum checksum
       }
