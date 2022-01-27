@@ -294,10 +294,6 @@ let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: str
             let calDirWithBasePath = Path.Combine(basePath, getCalDirectory)
             let simDirWithBasePath = Path.Combine(calDirWithBasePath, simDir)
             let outputDirWithBasePath = Path.Combine(simDirWithBasePath, getTargetOutputDirectory)
-            printfn $"outputDirWithBasePath: %s{outputDirWithBasePath}"
-            printfn $"targetFileName: %s{targetFileName}"
-            printfn $"fileFullPath: %s{fileFullPath}"
-            printfn $"filePathWithChecksumDir: %s{filePathWithChecksumDir}"
             let symbolicLinkPath = Path.Combine(outputDirWithBasePath, targetFileName)
             System.IO.File.CreateSymbolicLink(symbolicLinkPath, fileFullPath) |> ignore
     )

@@ -79,7 +79,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             let targetDirectoryArgs = runArgs.GetResult(TargetDirectory, Some "data")
             let targetDirectory = defaultArg targetDirectoryArgs "data"
 
-            let outputSourceFullPath = { BasePath = basePath ; RelativePath = outputSourceDirectory }
+            let outputSourceFullPath = getFullPath { BasePath = basePath ; RelativePath = outputSourceDirectory }
             let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
 
             // Start dealing with input
@@ -100,25 +100,18 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     |> Array.choose (function | Ok v -> Some v | _ -> None)
                     |> Array.toList
 
-                // Side Effect: Delete All Previous Nodes if specified
-                let shouldCleanAll = args.Contains(CleanAll)
-                if shouldCleanAll then
-                    Neo4j.deleteAllNodes()
-
                 // First, parse the input config file to get the directory of input
                 let IOInput = Input.pickIOInput nodes
                 let inputDirectory = Input.getIOInputDirectory IOInput
                 // Next, get the input files 
                 let inputFilesWithType = Input.getExistingInputFiles inputDirectory nodes
                 let inputFiles = inputFilesWithType |> List.map (fun item -> item.Node)
-                // Side effect: Create the files node in DB
-                Neo4j.createMultipleNodesIfNotExist inputFiles
-
-                // Side effect: copy input files
+                
+                // Side effect [input files]: copy input files in FS
                 inputFiles
                 |> filterOutExistedFiles targetFullPath 
-                |> copyInputFiles (basePath, inputSourceDirectory, targetDirectory) 
-
+                |> copyInputFiles (basePath, inputSourceDirectory, targetDirectory)
+                
                 // End of dealing with input
 
                 // Start dealing with converting input config file
@@ -130,25 +123,17 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let convertedConfigText = Input.convertConfigFileText configContent inputFilesAndIODirToBeConverted
                 let inputConfigChecksum = getChecksum convertedConfigText
                 let inputConfigFileType = "Input Config"
-                // Side effect: Create the input config file
+                
+                // Side effect [input config file]: Create the input config file in FS
                 createInputConfigFile (convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) targetFullPath
                 
-                let inputConfigChecksumFileInfo = { FileName = configArgs; Checksum = inputConfigChecksum }
-                let { FileDirFullPath = inputConfigFileTargetDir } = getFilePathInfo targetFullPath inputConfigChecksumFileInfo
-                let inputConfigFileNameWithChecksum = getChecksumFileName inputConfigChecksum configArgs
                 let inputConfigFileNode = 
-                    Input.getInputFileResult inputConfigFileNameWithChecksum inputConfigFileTargetDir inputConfigFileType
+                    Input.getInputFileResult configArgs basePath inputConfigFileType
                     |> Option.get
                     |> (fun item -> item.Node)
-
-                // Side effect: Create the input config file node in DB
-                Neo4j.createSingleNodeIfNotExist inputConfigFileNode
-
+                  
                 let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
-                // Side effect: Create the relationship node in DB
-                Neo4j.createSingleNodeIfNotExist simulationNode
 
-                // Side effect: Relate the file nodes with simulation
                 let inputRelationshipInfos: Neo4j.RelationShipInfo list = 
                     List.map (
                         fun (item: Input.InputFile) -> 
@@ -168,9 +153,10 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let _, checksumStr = getChecksumInfoFromChecksumArray commitsChecksum
                 let treeFileType = "Tree"
                 let treeFileName = getTreeFileName
-                // Side effect: create the tree file
+                
+                // Side effect [tree file]: create the tree file in FS
                 createTreeFile checksumStr (treeFileName, treeFileType, inputConfigChecksum) targetFullPath
-
+                
                 let treeChecksumFileInfo = { FileName = treeFileName; Checksum = inputConfigChecksum }
                 let { FileDirFullPath = treeFileTargetDir } = getFilePathInfo targetFullPath treeChecksumFileInfo
                 let treeFileNameWithChecksum = getChecksumFileName inputConfigChecksum treeFileName
@@ -179,10 +165,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     |> Option.get
                     |> (fun item -> item.Node)
 
-                // Side effect: Create the tree file node in DB
-                Neo4j.createSingleNodeIfNotExist treeFileNode
-
-                // let treeFileRelationshipProps = Some (Dto.HasInputDTO ({ Type = inputConfigFileType }))
                 let treeFileRelationshipInfo: Neo4j.RelationShipInfo = 
                     { SourceNode = simulationNode ; TargetNode = treeFileNode ; Relationship = "HAS_TREE" ; RelationshipProps = None }
                 // Done with tree file
@@ -191,31 +173,25 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // Get the target path by tree checksum
                 let targetOutputFullPath = getTargetOutputFullPath targetFullPath 
                 let targetOutputWithChecksumFullPath = getTargetOutputWithChecksumFullPath targetFullPath inputConfigChecksum
-                // Get the source output data path 
-                let srcPath = getFullPath outputSourceFullPath
+
                 // Side effect: copy output data to the target path
-                directoryCopy srcPath targetOutputWithChecksumFullPath inputConfigChecksum false
+                directoryCopy outputSourceFullPath targetOutputWithChecksumFullPath inputConfigChecksum false
 
                 // Get the source output data path 
                 let outputFiles = getAllFilesInDirectory targetOutputWithChecksumFullPath
                 let outputFileNodes = Input.initOutputFileNodes outputFiles targetOutputWithChecksumFullPath
-                // Side effect: Create the output node in DB
-                Neo4j.createMultipleNodesIfNotExist outputFileNodes
-                // Side effect: Relate the output nodes with simulation
                 let outputRelationshipInfos: Neo4j.RelationShipInfo list = 
                     List.map (
                         fun file -> 
                             { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
                     ) outputFileNodes
-
-                // Side effect: append the tree file with the output files
+                
+                // Side effect [tree file]: append the tree file with the output files in FS
                 updateTreeRelatedFiles outputFileNodes targetFullPath inputConfigChecksum
-
+                
                 // End of dealing with output
 
-                // Side effect: Relate all the nodes with simulation
                 let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
-                Neo4j.relateMultipleNodes relationshipList
                 
                 // Start creating directory for the calculation
 
@@ -226,14 +202,26 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
                 
-                // Side effect: Create simulation folder
                 let simulationInputFiles = inputConfigFileNode::inputFiles
+                
+                // Side effect [simulation folder]: Create the simulation folder in FS
                 createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFileNodes, targetOutputFullPath)
                 
                 // End of creating directory for the calculation
                 
-                // All side effects:
-              
+                // All side effects for DB:
+                // Side Effect: Delete All Previous Nodes if specified in DB
+                let shouldCleanAll = args.Contains(CleanAll)
+                if shouldCleanAll then
+                    Neo4j.deleteAllNodes()
+                
+                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFiles@outputFileNodes
+                // Side effect [all]: Create all the nodes in DB
+                Neo4j.createMultipleNodesIfNotExist allNodes
+                
+                // Side effect [all]: Relate all the nodes with simulation in DB
+                Neo4j.relateMultipleNodes relationshipList
+                
                 
                 Ok ()
             | Error e -> 
