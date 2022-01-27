@@ -84,16 +84,16 @@ let fromDto (dto: Dto<'T>) =
   dto.data
 
 // Convert a node into a node dto
-let fromDomain (inputNode: Domain.Node) =
+let fromDomain (inputNode: Node) =
   match inputNode with 
-  | Domain.File file -> 
+  | File file -> 
     let checksum = file.Checksum |> Checksum.value
     let name = file.Name |> Name.value
     let path = file.Path |> Path.value
     let format = file.Format |> Format.value
     let dto = FileDto { Checksum = checksum; Name = name; Path = path; Format = format } 
     dto
-  | Domain.ConfigFileInput input -> 
+  | ConfigFileInput input -> 
       let configType = input.ConfigType |> FileType.value
       let file = input.File |> InputFile.value
       let dto = ConfigFileInputDto {
@@ -101,7 +101,7 @@ let fromDomain (inputNode: Domain.Node) =
         File = file
       } 
       dto
-  | Domain.FVCOMInput fvcomInput -> 
+  | FVCOMInput fvcomInput -> 
     let configType = fvcomInput.ConfigType |> InputType.value
     let startDate = fvcomInput.StartDate |> StartDate.value
     let endDate = fvcomInput.EndDate |> EndDate.value
@@ -117,7 +117,7 @@ let fromDomain (inputNode: Domain.Node) =
       TimeZone = timezone
     }
     dto
-  | Domain.IOInput input -> 
+  | IOInput input -> 
       let configType = input.ConfigType |> InputType.value
       let inputDirectory = input.InputDirectory |> InputDirectory.value
       let outputDirectory = input.OutputDirectory |> OutputDirectory.value
@@ -127,7 +127,7 @@ let fromDomain (inputNode: Domain.Node) =
         OutputDirectory = outputDirectory
       }
       dto
-  | Domain.Simulation input -> 
+  | Simulation input -> 
       let checksum = input.Checksum |> Checksum.value
       let dto = SimulationDto {
         Checksum = checksum
@@ -135,7 +135,7 @@ let fromDomain (inputNode: Domain.Node) =
       dto
 
 // create a domain object from a DTO
-let toDomain (dto: Dto<NodeDto>) :Result<Domain.Node,string> =
+let toDomain (dto: Dto<NodeDto>) :Result<Node,string> =
   let nodeDto = dto |> fromDto
   match nodeDto with 
   | FileDto data -> 
@@ -146,7 +146,7 @@ let toDomain (dto: Dto<NodeDto>) :Result<Domain.Node,string> =
         let! path = data.Path |> Path.create "Path"
         let! format = data.Format |> Format.create "Format"
         // combine the components to create the domain object
-        return Domain.File {
+        return File {
           Checksum = checksum
           Name = name
           Path = path
@@ -157,7 +157,7 @@ let toDomain (dto: Dto<NodeDto>) :Result<Domain.Node,string> =
         result {
         let! configType = data.ConfigType |> FileType.create "ConfigType"
         let! file = data.File |> InputFile.create "File"
-        return Domain.ConfigFileInput {
+        return ConfigFileInput {
           ConfigType = configType
           File = file
         }
@@ -172,7 +172,7 @@ let toDomain (dto: Dto<NodeDto>) :Result<Domain.Node,string> =
       let! timezone = data.TimeZone |> TimeZone.create "TimeZone"
       let! dateFormat = data.DateFormat |> DateFormat.create "DateFormat"
       // combine the components to create the domain object
-      return Domain.FVCOMInput {
+      return FVCOMInput {
         ConfigType = configType
         CaseTitle = caseTitle
         DateFormat = dateFormat
@@ -188,7 +188,7 @@ let toDomain (dto: Dto<NodeDto>) :Result<Domain.Node,string> =
       let! inputDirectory = data.InputDirectory |> InputDirectory.create "InputDirectory"
       let! outputDirectory = data.OutputDirectory |> OutputDirectory.create "OutputDirectory"
       // combine the components to create the domain object
-      return Domain.IOInput {
+      return IOInput {
         ConfigType = configType
         InputDirectory = inputDirectory
         OutputDirectory = outputDirectory
@@ -199,13 +199,13 @@ let toDomain (dto: Dto<NodeDto>) :Result<Domain.Node,string> =
       // get each (validated) simple type from the DTO as a success or failure
       let! checksum = data.Checksum |> Checksum.create "Checksum"
       // combine the components to create the domain object
-      return Domain.Simulation {
+      return Simulation {
         Checksum = checksum
       }
     }
 
 // Serialize the Node into a JSON string
-let jsonFromDomain (input: Domain.Node) =
+let jsonFromDomain (input: Node) =
   let nodeDto = input |> fromDomain
   match nodeDto with 
   | FileDto dto -> dto |> Json.serialize
@@ -221,7 +221,7 @@ let getNodeFromDtoData (dtoData: Dto<NodeDto>) =
     |> Result.mapError ValidationError
 module FVCOMInputDto =
   // Deserialize a JSON string into a FVCOMInput Node
-  let jsonToDomain jsonString :Result<Domain.Node, DtoError> =
+  let jsonToDomain jsonString :Result<Node, DtoError> =
     result {
       let! deserializedValue =
           jsonString
@@ -240,7 +240,7 @@ module FVCOMInputDto =
   }
 module FileDto =
   // Deserialize a JSON string into a File Node
-  let jsonToDomain jsonString :Result<Domain.Node, DtoError> =
+  let jsonToDomain jsonString :Result<Node, DtoError> =
     result {
       let! deserializedValue =
           jsonString
@@ -260,7 +260,7 @@ module FileDto =
 
 module IOInputDto =
   // Deserialize a JSON string into a IOInput Node
-  let jsonToDomain jsonString :Result<Domain.Node, DtoError> =
+  let jsonToDomain jsonString :Result<Node, DtoError> =
     result {
       let! deserializedValue =
           jsonString
@@ -280,7 +280,7 @@ module IOInputDto =
 
 module SimulationDto =
   // Deserialize a JSON string into a Simulation Node
-  let jsonToDomain jsonString :Result<Domain.Node, DtoError> =
+  let jsonToDomain jsonString :Result<Node, DtoError> =
     result {
       let! deserializedValue =
           jsonString
@@ -316,9 +316,9 @@ module NodeDto =
   //     let ddata = name |> nameDtoFromDomain
   //     {Tag="D"; BData=nullBData; CData=nullCData; DData=ddata}
   let toDomain (dto: string * seq<string>) =
-    let (jsonString, labels) = dto
+    let jsonString, labels = dto
     let labelArr = Seq.toArray labels
-    printfn "toDomain labelArr:%A" labelArr
+    printfn $"toDomain labelArr:%A{labelArr}"
     let result: NodeOutput = 
       {
           Labels = labelArr

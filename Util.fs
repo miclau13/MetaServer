@@ -6,10 +6,10 @@ open System.Security.Cryptography
 
 let (|RegexGroup|_|) pattern (groupIndex: int) input  =
     let m = Regex.Match(input, pattern)
-    if (m.Success) then Some m.Groups.[groupIndex].Value else None
+    if m.Success then Some m.Groups.[groupIndex].Value else None
 let (|RegexTitle|_|) pattern input =
     let m = Regex.Match(input, pattern)
-    if (m.Success) then Some input else None
+    if m.Success then Some input else None
 
 let stringReplacementByRegex (pattern: string) (replacement: string) (input: string) =
     Regex.Replace(input, pattern, replacement)
@@ -28,7 +28,7 @@ let getChecksumInfoFromChecksumArray (checksums: string []) =
     let checksumStr = 
         checksums 
         |> Array.reduce (fun acc item -> 
-            sprintf "%s\n%s" acc item
+            $"%s{acc}\n%s{item}"
         ) 
     let checksum = 
         checksumStr
@@ -42,7 +42,7 @@ let getChecksumFileName (checksum: string) (fileName: string) =
     match fileName with 
     | RegexGroup FileWithChecksumRegex 0 _  -> 
         fileName
-    | _ ->  sprintf "%s-%s" checksum fileName
+    | _ ->  $"%s{checksum}-%s{fileName}"
 
 // Modified on 12 Jan - Use one directory level only
 let getChecksumDirFromChecksum (checksum: string) = 
@@ -50,4 +50,4 @@ let getChecksumDirFromChecksum (checksum: string) =
     directoryLevel1
 
 let getSimulationDirectoryPath (checksum: string, caseTitle: string, timestamp: string) = 
-    sprintf "%s-%s-%s" checksum caseTitle timestamp
+    $"%s{checksum}-%s{caseTitle}-%s{timestamp}"

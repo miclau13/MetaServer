@@ -11,7 +11,7 @@ let getDbClient () =
     let sandboxUserPassword = appsettings.NeoPassword
     let driver = GraphDatabase.Driver(boltUri, AuthTokens.Basic(sandboxUserName, sandboxUserPassword));
     let client = new BoltGraphClient (driver);
-    client.ConnectAsync() |> Async.AwaitTask |> Async.RunSynchronously |> ignore
+    client.ConnectAsync() |> Async.AwaitTask |> Async.RunSynchronously
     let clientWithCypher = client.Cypher
     clientWithCypher
 

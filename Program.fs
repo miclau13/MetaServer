@@ -100,7 +100,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     |> Array.choose (function | Ok v -> Some v | _ -> None)
                     |> Array.toList
 
-                // Delete All Previous Nodes if specified
+                // Side Effect: Delete All Previous Nodes if specified
                 let shouldCleanAll = args.Contains(CleanAll)
                 if shouldCleanAll then
                     Neo4j.deleteAllNodes()
@@ -130,6 +130,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let convertedConfigText = Input.convertConfigFileText configContent inputFilesAndIODirToBeConverted
                 let inputConfigChecksum = getChecksum convertedConfigText
                 let inputConfigFileType = "Input Config"
+                // Side effect: Create the input config file
                 createInputConfigFile (convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) targetFullPath
                 
                 let inputConfigChecksumFileInfo = { FileName = configArgs; Checksum = inputConfigChecksum }
@@ -212,7 +213,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 // End of dealing with output
 
-                // Relate all the nodes with simulation
+                // Side effect: Relate all the nodes with simulation
                 let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
                 Neo4j.relateMultipleNodes relationshipList
                 
@@ -224,11 +225,16 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     List.pick (fun node -> match node with | Domain.FVCOMInput n -> Some n | _ -> None)
 
                 let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
-
+                
+                // Side effect: Create simulation folder
                 let simulationInputFiles = inputConfigFileNode::inputFiles
                 createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFileNodes, targetOutputFullPath)
                 
                 // End of creating directory for the calculation
+                
+                // All side effects:
+              
+                
                 Ok ()
             | Error e -> 
                 let errorMessage = $"Input parsing failed: %A{e}"

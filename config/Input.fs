@@ -1,6 +1,5 @@
 module Input
 
-open System
 open System.IO
 
 open Domain
@@ -26,15 +25,15 @@ let getFileNameAndFormat (f: string) =
 
 let getInputFileResult (fileName: string) (inputDirectory: string) (fileType: string) = 
   match fileName with
-  | Util.RegexGroup "\." 0 _ ->
-    let (name, format) = getFileNameAndFormat fileName
+  | RegexGroup "\." 0 _ ->
+    let name, format = getFileNameAndFormat fileName
     let fileLocation = Path.Combine(inputDirectory, fileName)
-    if (FileIO.checkIfFileExist fileLocation) then
+    if (checkIfFileExist fileLocation) then
       let checksum = 
         // If input is in nc format, check if it has checksum in its file name
         // If yes then use the checksum directly, otherwise generate checksum 
         match name with 
-        | Util.RegexGroup FileWithChecksumRegex 0 name  -> 
+        | RegexGroup FileWithChecksumRegex 0 name  -> 
           name
         | _ -> getChecksumFromFile fileLocation
       let file = File {
@@ -45,37 +44,37 @@ let getInputFileResult (fileName: string) (inputDirectory: string) (fileType: st
       }
       Some { Node = file ; Type = fileType }
     else 
-      let err = sprintf "File (%s) does not exist at the path (%s)." fileName inputDirectory
+      let err = $"File (%s{fileName}) does not exist at the path (%s{inputDirectory})."
       failwith err
   | _ ->  
-      printfn "Input File (name: %s, configType: %s) is not created " fileName fileType
+      printfn $"Input File (name: %s{fileName}, configType: %s{fileType}) is not created "
       None
 
 let getFilePropertyRegex (property: string) = 
-  sprintf "(.*?%s)(\s*=\s*'*)([^',]*)('*\s*)(,?)" property
+  $"(.*?%s{property})(\s*=\s*'*)([^',]*)('*\s*)(,?)"
 
 let getProperty (str: string) (property: string) =
     let regex = getFilePropertyRegex property
     match str with
     // Since the regex for file is specified
     // So the index of the capturing group must be 3 unless regex is changed
-    | Util.RegexGroup regex 3 str ->
+    | RegexGroup regex 3 str ->
       str
-    | _ -> failwith (sprintf "Could not capture the string value (%s) with propert (%s) by getFilePropertyRegex" str property)
+    | _ -> failwith $"Could not capture the string value (%s{str}) with property (%s{property}) by getFilePropertyRegex"
 
 // For output files 
-let initOutputFileNodes (files: IO.FileInfo []) (dir: string) = 
+let initOutputFileNodes (files: FileInfo []) (dir: string) = 
   let fileNodes = 
-    Array.Parallel.map (fun (file: IO.FileInfo) -> 
+    Array.Parallel.map (fun (file: FileInfo) -> 
       let fileName = file.Name
-      let (name, format) = getFileNameAndFormat fileName
+      let name, format = getFileNameAndFormat fileName
       // use file name as the checksum
       let checksum = name
       let result = File {
           Path = Path dir
           Name = Name name
           Format = Format format
-          Checksum = Checksum (checksum)
+          Checksum = Checksum checksum
       }
       result
     ) files
@@ -769,7 +768,7 @@ let parserResultToDomain (result: list<string>) =
 let pickIOInput (nodes: Node list) = 
   List.pick (
       function 
-      | Domain.IOInput i -> Some i
+      | IOInput i -> Some i
       | _ -> None
   ) nodes
 
@@ -783,8 +782,8 @@ let getIOOutputDirectory (input: IOInput) =
 
 let getFile (inputDirectory: string) (node: Node) = 
     match node with 
-    | Simulation _ | File _ | Domain.IOInput _ | Domain.FVCOMInput _-> None
-    | Domain.ConfigFileInput n -> 
+    | Simulation _ | File _ | IOInput _ | FVCOMInput _-> None
+    | ConfigFileInput n -> 
         let (InputFile file) = n.File
         let (FileType configType) = n.ConfigType
         getInputFileResult file inputDirectory configType
@@ -798,13 +797,13 @@ let getExistingInputFiles (inputDirectory: string) (inputs: Node list) =
         |> List.choose id
       files
 
-let getInputFilesToBeConverted (inputFiles: Domain.Node list) = 
+let getInputFilesToBeConverted (inputFiles: Node list) = 
     inputFiles
-    |> List.choose (fun node -> match node with | Domain.File file -> Some file | _ -> None)
+    |> List.choose (fun node -> match node with | File file -> Some file | _ -> None)
     |> List.map (
         fun file -> 
             let fileNameWithFormat = getFileName file
-            let (Domain.Checksum checksum) = file.Checksum
+            let (Checksum checksum) = file.Checksum
             let replacementFileName = getChecksumFileName checksum fileNameWithFormat
             { Input = fileNameWithFormat ; Replacement = replacementFileName }
     )
@@ -814,7 +813,7 @@ let convertConfigFileText (inputConfigText: string) (filesReplacement: InputConf
     filesReplacement
     |> List.fold (
       fun acc inputConfigReplacement -> 
-        acc |> Util.stringReplacement inputConfigReplacement.Input inputConfigReplacement.Replacement
+        acc |> stringReplacement inputConfigReplacement.Input inputConfigReplacement.Replacement
     ) inputConfigText
   convertedConfigText
 

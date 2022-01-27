@@ -145,8 +145,8 @@ let getChecksumListArrayFromNodes (nodes: list<Node>)=
           let (Name fileName) = f.Name
           match fileName with 
           | Util.RegexGroup Util.FileWithChecksumRegex 0 fileName -> 
-            Some (fileName)
-          | _ -> Some (sprintf "%s-%s" checksum fileName)
+            Some fileName
+          | _ -> Some $"%s{checksum}-%s{fileName}"
       | _ ->  None
   )
   |> Array.choose id
@@ -154,4 +154,4 @@ let getChecksumListArrayFromNodes (nodes: list<Node>)=
 let getFileName (file: File) =
     let (Name fileName) = file.Name
     let (Format fileFormat) = file.Format
-    sprintf "%s.%s" fileName fileFormat
+    $"%s{fileName}.%s{fileFormat}"

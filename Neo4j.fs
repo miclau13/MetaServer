@@ -115,9 +115,9 @@ let getRelationships (relationship: string, relationshipProperty: string option,
         match relationshipProperty with 
         | Some p -> 
             match relationshipPropertyValue with 
-            | Some pv -> sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship p pv
+            | Some pv -> $"p = (node)<-[relationship:%s{relationship} {{%s{p}:'%s{pv}'}}]-(targetNode)"
             | None -> $"p = (node)<-[relationship:%s{relationship}]-(targetNode)"
-        | None -> sprintf "p = (node)<-[relationship:%s]-(targetNode)" relationship
+        | None -> $"p = (node)<-[relationship:%s{relationship}]-(targetNode)"
 
     clientWithCypher.Match(queryMatchTo)
         .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
@@ -135,8 +135,8 @@ let getRelationships (relationship: string, relationshipProperty: string option,
 let getRelatedNodesPath (relationship: string option, checksum: string, maxPathLength: string) =
     let queryMatchTo = 
         match relationship with
-        | Some r -> sprintf "p = (node)<-[:%s%s]-(targetNode)" r maxPathLength
-        | None -> sprintf "p = (node)<-[%s]-(targetNode)" maxPathLength
+        | Some r -> $"p = (node)<-[:%s{r}%s{maxPathLength}]-(targetNode)"
+        | None -> $"p = (node)<-[%s{maxPathLength}]-(targetNode)"
     let resultTo =
         clientWithCypher
             .Match(queryMatchTo)
@@ -147,8 +147,8 @@ let getRelatedNodesPath (relationship: string option, checksum: string, maxPathL
         |> getResult "TO"
     let queryMatchFrom = 
         match relationship with
-        | Some r -> sprintf "p = (node)-[:%s%s]->(targetNode)" r maxPathLength
-        | None -> sprintf "p = (node)-[%s]->(targetNode)" maxPathLength
+        | Some r -> $"p = (node)-[:%s{r}%s{maxPathLength}]->(targetNode)"
+        | None -> $"p = (node)-[%s{maxPathLength}]->(targetNode)"
     let resultFrom =
         clientWithCypher
             .Match(queryMatchFrom)
@@ -184,7 +184,7 @@ let getNodeByChecksum (checksum: string) =
     nodes
 
 let getNodesByLabel (label: string) =
-    let queryMatch = sprintf "(node: %s)" label
+    let queryMatch = $"(node: %s{label})"
     let result =
         clientWithCypher
             .Match(queryMatch)
@@ -201,8 +201,8 @@ let getClientWithCreateRelationStr (sourceNodeName, targetNodeName, relationship
         match relationshipProps with
         | Some p -> 
             let relationshipAttributes = getRelationshipAttributes(p)
-            sprintf "(%s)-[:%s%s]->(%s)" sourceNodeName relationship relationshipAttributes targetNodeName
-        | None -> sprintf "(%s)-[:%s]->(%s)" sourceNodeName relationship targetNodeName
+            $"(%s{sourceNodeName})-[:%s{relationship}%s{relationshipAttributes}]->(%s{targetNodeName})"
+        | None -> $"(%s{sourceNodeName})-[:%s{relationship}]->(%s{targetNodeName})"
     client.Create(queryRelationshipStr)
 
 let getClientWithMergeStr (str: string) (client: Cypher.ICypherFluentQuery) =
@@ -248,13 +248,13 @@ let convertNodeToQueryStr (index: int) (node: Node) =
     let nodeLabel = nodeAttributes.Label
     let nodeKey = nodeAttributes.Key
     let nodeKeyValue = nodeAttributes.KeyValue
-    let mergeStr = sprintf "(node%i:%s {%s: $nodeKeyValue%i})" index nodeLabel nodeKey index
+    let mergeStr = $"(node%i{index}:%s{nodeLabel} {{%s{nodeKey}: $nodeKeyValue%i{index}}})"
     (mergeStr, index, node, nodeKeyValue)
 
 let getReducedMergeQueryStr (strList: string list) = 
     List.reduce (
         fun acc str -> 
-            sprintf "%s,%s" acc str
+            $"%s{acc},%s{str}"
     ) strList
 
 let createNodesIfNotExist (nodes: Node list) =
@@ -262,9 +262,9 @@ let createNodesIfNotExist (nodes: Node list) =
     let clientWithSetStrAndParam = 
         List.fold (
             fun acc (mergeStr, index, node, nodeKeyValue) -> 
-                let nodeName = sprintf "node%i" index
-                let setStr = sprintf "%s = $%s" nodeName nodeName
-                let nodeKey = sprintf "nodeKeyValue%i" index 
+                let nodeName = $"node%i{index}"
+                let setStr = $"%s{nodeName} = $%s{nodeName}"
+                let nodeKey = $"nodeKeyValue%i{index}" 
                 let client' = acc |> getClientWithMergeStr mergeStr
                 client'.OnCreate()
                 |> getClientWithSetStr setStr
@@ -286,20 +286,20 @@ let createMultipleNodesIfNotExist (nodes: Node list) =
         createNodesIfNotExist nodes
     with
     | error ->
-        let message = sprintf "Exception in creating nodes: %s" error.Message
-        printfn "%A" message
+        let message = $"Exception in creating nodes: %s{error.Message}"
+        printfn $"%A{message}"
 
 let relateNodes (sourceNode': Node) (targetNode': Node) (relationship: string) (relationshipProperty: RelationshipDto option) =
     let sourceNodeAttributes = getNodeAttributes(sourceNode')
     let targetNodeAttributes = getNodeAttributes(targetNode')
-    let querySource = sprintf "(sourceNode:%s)" sourceNodeAttributes.Label 
-    let queryTarget = sprintf "(targetNode:%s)" targetNodeAttributes.Label
+    let querySource = $"(sourceNode:%s{sourceNodeAttributes.Label})" 
+    let queryTarget = $"(targetNode:%s{targetNodeAttributes.Label})"
     let queryRelationship = 
         match relationshipProperty with
         | Some p -> 
             let relationshipAttributes = getRelationshipAttributes(p)
-            sprintf "(sourceNode)-[:%s%s]->(targetNode)" relationship relationshipAttributes
-        | None -> sprintf "(sourceNode)-[:%s]->(targetNode)" relationship
+            $"(sourceNode)-[:%s{relationship}%s{relationshipAttributes}]->(targetNode)"
+        | None -> $"(sourceNode)-[:%s{relationship}]->(targetNode)"
     clientWithCypher
         .Match(querySource, queryTarget)
         .Where(fun sourceNode -> sourceNode.Checksum = sourceNodeAttributes.KeyValue)
@@ -310,7 +310,7 @@ let relateNodes (sourceNode': Node) (targetNode': Node) (relationship: string) (
 
 let deleteNode (node: Node) =
     let nodeAttributes = getNodeAttributes(node)
-    let query = sprintf "(node:%s)" nodeAttributes.Label
+    let query = $"(node:%s{nodeAttributes.Label})"
     clientWithCypher
         .Match(query)
         .Where(fun node -> node.Checksum = nodeAttributes.KeyValue)
@@ -330,7 +330,7 @@ let create (node: Node) =
     let cypherCreate (node: Node) =
         try
             let label = getNodeLabel node
-            let query = sprintf "(n:%s $node)" label 
+            let query = $"(n:%s{label} $node)" 
             let client' = getClientWithNodeInputParameter node "node" clientWithCypher
             client'
                 .Create(query)
@@ -338,11 +338,11 @@ let create (node: Node) =
                 |> Async.AwaitTask
                 |> Async.RunSynchronously
 
-            let message = sprintf "%s is created successfully!" label
+            let message = $"%s{label} is created successfully!"
             Ok(node, message)
         with
         | error ->
-            let message = sprintf "Exception in creating node: %s" error.Message
+            let message = $"Exception in creating node: %s{error.Message}"
             Error(message)
 
     cypherCreate node
@@ -352,7 +352,7 @@ let update (node: Node) =
     let cypherUpdate (node: Node) =
         try
             let label = getNodeLabel node
-            let query = sprintf "(n:%s)" label
+            let query = $"(n:%s{label})"
             let client' = getClientWithNodeInputParameter node "node" clientWithCypher
             client'
                 .Match(query)
@@ -360,11 +360,11 @@ let update (node: Node) =
                 |> Async.AwaitTask
                 |> Async.RunSynchronously
 
-            let message = sprintf "%s is created successfully!" label
+            let message = $"%s{label} is created successfully!"
             Ok(node, message)
         with
         | error ->
-            let message = sprintf "Exception in creating node: %s" error.Message
+            let message = $"Exception in creating node: %s{error.Message}"
             Error(message)
 
     cypherUpdate node
@@ -378,14 +378,14 @@ let convertRelationToQueryStr (index: int) (relationShipInfo: RelationShipInfo) 
     let targetNodeAttributes = getNodeAttributes(targetNode)
     let sourceNodeName = sprintf "%s%i" "sourceNode" index
     let targetNodeName = sprintf "%s%i" "targetNode" index
-    let querySourceStr = sprintf "(%s:%s{ %s: '%s' })" sourceNodeName sourceNodeAttributes.Label sourceNodeAttributes.Key sourceNodeAttributes.KeyValue
-    let queryTargetStr = sprintf "(%s:%s{ %s: '%s' })" targetNodeName targetNodeAttributes.Label sourceNodeAttributes.Key targetNodeAttributes.KeyValue
+    let querySourceStr = $"(%s{sourceNodeName}:%s{sourceNodeAttributes.Label}{{ %s{sourceNodeAttributes.Key}: '%s{sourceNodeAttributes.KeyValue}' }})"
+    let queryTargetStr = $"(%s{targetNodeName}:%s{targetNodeAttributes.Label}{{ %s{sourceNodeAttributes.Key}: '%s{targetNodeAttributes.KeyValue}' }})"
     let queryRelationshipStr = 
         match relationshipProps with
         | Some p -> 
             let relationshipAttributes = getRelationshipAttributes(p)
-            sprintf "(%s)-[:%s%s]->(%s)" sourceNodeName relationship relationshipAttributes targetNodeName
-        | None -> sprintf "(%s)-[:%s]->(%s)" sourceNodeName relationship targetNodeName
+            $"(%s{sourceNodeName})-[:%s{relationship}%s{relationshipAttributes}]->(%s{targetNodeName})"
+        | None -> $"(%s{sourceNodeName})-[:%s{relationship}]->(%s{targetNodeName})"
     (querySourceStr, queryTargetStr, queryRelationshipStr, index, sourceNodeName, sourceNodeAttributes.KeyValue, targetNodeName, targetNodeAttributes.KeyValue, relationship)
 
 let createNodesRelationship (relationShipInfos: RelationShipInfo list)=
@@ -409,5 +409,5 @@ let relateMultipleNodes (relationShipInfos: RelationShipInfo list) =
         createNodesRelationship relationShipInfos
     with
     | error ->
-        let message = sprintf "Exception in creating nodes relationship: %s" error.Message
-        printfn "%A" message
+        let message = $"Exception in creating nodes relationship: %s{error.Message}"
+        printfn $"%A{message}"

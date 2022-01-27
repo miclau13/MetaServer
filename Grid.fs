@@ -1,3 +1,0 @@
-module Grid
-
-open Domain
