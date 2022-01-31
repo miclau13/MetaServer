@@ -8,6 +8,7 @@ open Util
 
 type CliError =
     | ArgumentsNotSpecified
+    | Neo4jError
 
 type CmdArgs =
     | [<AltCommandLine("-p")>] Print of message:string
@@ -228,7 +229,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             | Error e -> 
                 let errorMessage = $"Input parsing failed: %A{e}"
                 failwith errorMessage
-            // Ok ()
         with 
             ex -> 
                 printfn $"%s{ex.Message}"
@@ -238,77 +238,80 @@ let runInit (runArgs: ParseResults<InitArgs>) =
         Ok ()
 
 let runList (runArgs: ParseResults<ListArgs>) =
-    match runArgs with
-    | args when args.Contains(All) ->
-        let result = Neo4j.getAllNodes ()
-        printfn $"Result: %A{result} "
-        Ok ()
-    | args when args.Contains(Label) ->
-        // Get the label
-        let labelArgs = runArgs.GetResult(Label)
-        // Get the nodes with specific label
-        let result = Neo4j.getNodesByLabel(labelArgs)
-        printfn $"Result: %A{result} "
-        Ok ()
-    | args when (args.Contains(Relationship) && args.Contains(Checksum)) ->
-        // Get the relationship and checksum
-        let checksum = runArgs.GetResult(Checksum)
-        // Get the nodes with specific relationship
-        let relationship = runArgs.GetResult(Relationship)
-        // Get the maximum path length if any
-        let maxPathLength = 
-            match args.Contains(MaxPathLength) with
-            | true -> $"*..%s{runArgs.GetResult(MaxPathLength)}"
-            | false -> "*"
-        let result = Neo4j.getRelatedNodesPath((relationship, checksum, maxPathLength))
-        printfn $"%A{result}"
-        Ok ()
-    | args when args.Contains(Relationship) ->
-        // Get the relationship
-        let relationship = runArgs.GetResult(Relationship)
-        match relationship with
-        | Some r -> 
-            // Get the relationship properties if any
-            match args.Contains(RelationshipProperty) with
-            | true -> 
-                let relationshipProperty = runArgs.GetResult(RelationshipProperty)
-                match args.Contains(RelationshipPropertyValue) with
+    try 
+        match runArgs with
+        | args when args.Contains(All) ->
+            let result = Neo4j.getAllNodes ()
+            printfn $"Result: %A{result} "
+            Ok ()
+        | args when args.Contains(Label) ->
+            // Get the label
+            let labelArgs = runArgs.GetResult(Label)
+            // Get the nodes with specific label
+            let result = Neo4j.getNodesByLabel(labelArgs)
+            printfn $"Result: %A{result} "
+            Ok ()
+        | args when (args.Contains(Relationship) && args.Contains(Checksum)) ->
+            // Get the relationship and checksum
+            let checksum = runArgs.GetResult(Checksum)
+            // Get the nodes with specific relationship
+            let relationship = runArgs.GetResult(Relationship)
+            // Get the maximum path length if any
+            let maxPathLength = 
+                match args.Contains(MaxPathLength) with
+                | true -> $"*..%s{runArgs.GetResult(MaxPathLength)}"
+                | false -> "*"
+            let result = Neo4j.getRelatedNodesPath((relationship, checksum, maxPathLength))
+            printfn $"%A{result}"
+            Ok ()
+        | args when args.Contains(Relationship) ->
+            // Get the relationship
+            let relationship = runArgs.GetResult(Relationship)
+            match relationship with
+            | Some r -> 
+                // Get the relationship properties if any
+                match args.Contains(RelationshipProperty) with
                 | true -> 
-                    let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
-                    let result = Neo4j.getRelationships(r, Some relationshipProperty, Some relationshipPropertyValue)
+                    let relationshipProperty = runArgs.GetResult(RelationshipProperty)
+                    match args.Contains(RelationshipPropertyValue) with
+                    | true -> 
+                        let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
+                        let result = Neo4j.getRelationships(r, Some relationshipProperty, Some relationshipPropertyValue)
+                        printfn $"%A{result}"
+                        Ok ()
+                    | false ->
+                        printfn "%s" "No Relationship property value provided"
+                        Error ArgumentsNotSpecified
+                | false ->
+                    // Get the relationship with all properties if not specified
+                    let result = Neo4j.getRelationships(r, None, None)
                     printfn $"%A{result}"
                     Ok ()
-                    // sprintf "*..%s" (runArgs.GetResult(RelationshipProperty))
-                | false ->
-                    printfn "%s" "No Relationship property value provided"
-                    Error ArgumentsNotSpecified
-            | false ->
-                // let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
-                let result = Neo4j.getRelationships(r, None, None)
-                printfn $"%A{result}"
+            | None ->
+                // Get all relationships if not specified
+                let result = Neo4j.getAllRelationship()
+                for i in result do
+                    printfn $"%s{i}"
                 Ok ()
-        | None -> 
-            let result = Neo4j.getAllRelationship()
-            for i in result do
-                printfn $"%s{i}"
+        | args when args.Contains(Checksum) ->
+            // Get the checksum
+            let checksum = runArgs.GetResult(Checksum)
+            // Get the nodes with specific checksum
+            let result = Neo4j.getNodeByChecksum(checksum)
+            printfn $"%A{result}"
             Ok ()
-    | args when args.Contains(Checksum) ->
-        // Get the node
-        let checksum = runArgs.GetResult(Checksum)
-        // Get the nodes with specific checksum
-        let result = Neo4j.getNodeByChecksum(checksum)
-        printfn $"%A{result}"
-        Ok ()
-    | _ -> 
-        printfn "%s" "No argument provided"
-        Error ArgumentsNotSpecified
-
+        | _ -> 
+            printfn $"No argument provided"
+            Error ArgumentsNotSpecified
+    with ex ->
+         printfn $"%A{ex.Message}"
+         Error Neo4jError
 let getExitCode result =
     match result with
     | Ok () -> 0
     | Error err ->
         match err with
-        | ArgumentsNotSpecified -> 1
+        | _ -> 1
 
 let runPrint print = 
     printfn $"%s{print}"

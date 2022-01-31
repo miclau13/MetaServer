@@ -41,21 +41,6 @@ let getNodeLabel (node: Node) =
         | IOInput _ -> nameof IOInput
         | FVCOMInput _ -> nameof FVCOMInput
         | Simulation _ -> nameof Simulation
-        // | Grid _ -> nameof Grid
-
-        // | AirPressureInput _ -> nameof AirPressureInput
-        
-        // | GridCoordinatesInput _ -> nameof GridCoordinatesInput
-        // | HeatingInput _ -> nameof HeatingInput
-        // | NetCDFInput _ -> nameof NetCDFInput
-        // | OBCElevationInput _ -> nameof OBCElevationInput
-        // | OBCNodeListInput _ -> nameof OBCNodeListInput
-        // | PrecipitationInput _ -> nameof PrecipitationInput
-        // | RiverInput _ -> nameof RiverInput
-        // | StartupInput _ -> nameof StartupInput
-        // | StartupXInput _ -> nameof StartupXInput
-        // | WaveInput _ -> nameof WaveInput
-        // | WindInput _ -> nameof WindInput
     label
 
 // 10/11/2021
@@ -110,7 +95,6 @@ let getRelationshipAttributes (relationship: RelationshipDto) =
         | HasInputConfigDTO -> sprintf "{ }"
 
 let getRelationships (relationship: string, relationshipProperty: string option, relationshipPropertyValue: string option) =
-    // let queryMatchTo = sprintf "p = (node)<-[relationship:%s {%s:'%s'}]-(targetNode)" relationship relationshipProperty relationshipPropertyValue
     let queryMatchTo = 
         match relationshipProperty with 
         | Some p -> 

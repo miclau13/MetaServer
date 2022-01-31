@@ -759,9 +759,7 @@ let getNodeResultFromParserStr (parserStr: string) =
 let parserResultToDomain (result: list<string>) = 
     result 
     |> Array.ofList
-    |> Array.Parallel.map (fun item ->
-        getNodeResultFromParserStr item
-    )
+    |> Array.Parallel.map getNodeResultFromParserStr
     |> Array.reduce Array.append
 
 let pickIOInput (nodes: Node list) = 
