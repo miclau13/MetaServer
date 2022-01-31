@@ -200,8 +200,8 @@ let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: 
         | _ ->  printfn $"Item is not copied because it is not defined in the domain: %A{item}"
     )
 
-let createFile (content: string, fileName: string, fileType: string, checksum: string) (fullPathInfo: FullPathInfo)= 
-    // Get the  file path info
+let createFile (content: string, fileName: string, fileType: string, checksum: string) (fullPathInfo: FullPathInfo) = 
+    // Get the file path info
     let checksumFileInfo = { FileName = fileName; Checksum = checksum }
     let { FileFullPath = targetPath ; FileDirFullPath = targetDir } = getFilePathInfo fullPathInfo checksumFileInfo 
 
@@ -220,16 +220,6 @@ let createFile (content: string, fileName: string, fileType: string, checksum: s
             printfn $"%s{fileType} file Content Not Created with Error: %s{ex.Message}"
     else 
         printfn $"TargetPath (%s{targetPath}) already exists"
-
-let createTreeFile (checksumStr: string) (fileNameWithFormat: string, fileType: string, checksum: string) = 
-    
-    let currentTimeStamp = DateTime.UtcNow.ToString()
-    let currentUser = Environment.UserName
-    let commit = getChecksumFileName checksum "tree"
-    let treeContent = 
-        $"commit %s{commit}\nAuthor: %s{currentUser}\nDate: %s{currentTimeStamp}\nRelated files: \n%s{checksumStr}"
-
-    createFile (treeContent, fileNameWithFormat, fileType, checksum)
 
 let filterOutExistedFiles (targetFullPath: FullPathInfo) (inputFiles: list<Node> ) = 
     inputFiles
@@ -322,6 +312,4 @@ let updateTreeRelatedFiles (files: Node list) (fullPathInfo: FullPathInfo) (comm
                 printfn $"Tree Content did not updated, with Error: %s{ex.Message}"
     else 
         printfn $"TargetPath (%s{targetPath}) does not exists, did not update the content."
-
-let createInputConfigFile = createFile 
     

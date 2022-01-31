@@ -2,8 +2,11 @@
 
 open System
 open Argu
-open Parser
 open FileIO
+open FVCOM.CommitTree
+open FVCOM.InputConfig
+open Neo4jDb
+open Parser
 open Util
 
 type CliError =
@@ -106,71 +109,27 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let inputDirectory = Input.getIOInputDirectory IOInput
                 // Next, get the input files 
                 let inputFilesWithType = Input.getExistingInputFiles inputDirectory nodes
+                // Start dealing with input files
                 let inputFiles = inputFilesWithType |> List.map (fun item -> item.Node)
-                
                 // Side effect [input files]: copy input files in FS
                 inputFiles
                 |> filterOutExistedFiles targetFullPath 
                 |> copyInputFiles (basePath, inputSourceDirectory, targetDirectory)
-                
                 // End of dealing with input
 
                 // Start dealing with converting input config file
-                let inputFilesToBeConverted = Input.getInputFilesToBeConverted inputFiles
-                let inputDirToBeConverted = Input.convertConfigFileIOText inputDirectory "./"
-                let inputConfigFileOutputDirectory = Input.getIOOutputDirectory IOInput
-                let outputDirToBeConverted = Input.convertConfigFileIOText inputConfigFileOutputDirectory "./output/"
-                let inputFilesAndIODirToBeConverted = inputFilesToBeConverted@[inputDirToBeConverted ; outputDirToBeConverted]
-                let convertedConfigText = Input.convertConfigFileText configContent inputFilesAndIODirToBeConverted
+                let convertedConfigText = inputFiles |> getConvertedConfigText inputDirectory configContent IOInput
                 let inputConfigChecksum = getChecksum convertedConfigText
-                let inputConfigFileType = "Input Config"
-                
+                let inputConfigFileType = getInputConfigFileType ()
                 // Side effect [input config file]: Create the input config file in FS
-                createInputConfigFile (convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) targetFullPath
-                
-                let inputConfigChecksumFileInfo = { FileName = configArgs; Checksum = inputConfigChecksum }
-                let { FileDirFullPath = inputConfigFileTargetDir } = getFilePathInfo targetFullPath inputConfigChecksumFileInfo
-                let inputConfigFileNameWithChecksum = getChecksumFileName inputConfigChecksum configArgs
-                let inputConfigFileNode = 
-                    Input.getInputFileResult inputConfigFileNameWithChecksum inputConfigFileTargetDir inputConfigFileType
-                    |> Option.get
-                    |> (fun item -> item.Node)
-                  
-                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
-
-                let inputRelationshipInfos: Neo4j.RelationShipInfo list = 
-                    List.map (
-                        fun (item: Input.InputFile) -> 
-                            let inputFile = item.Node
-                            let relationship = item.Type
-                            let relationshipProps = Some (Dto.HasInputDTO { Type = relationship })
-                            { SourceNode = simulationNode ; TargetNode = inputFile ; Relationship = "HAS_INPUT" ; RelationshipProps = relationshipProps }
-                    ) inputFilesWithType
-
-                let inputConfigFileRelationshipInfo: Neo4j.RelationShipInfo = 
-                    { SourceNode = simulationNode ; TargetNode = inputConfigFileNode ; Relationship = "HAS_INPUT_CONFIG" ; RelationshipProps = None }
-
+                createFile(convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) targetFullPath
                 // Done with input config file
 
                 // Start dealing with tree file
                 let commitsChecksum = inputFiles |> Domain.getChecksumListArrayFromNodes
                 let _, checksumStr = getChecksumInfoFromChecksumArray commitsChecksum
-                let treeFileType = "Tree"
-                let treeFileName = getTreeFileName
-                
                 // Side effect [tree file]: create the tree file in FS
-                createTreeFile checksumStr (treeFileName, treeFileType, inputConfigChecksum) targetFullPath
-                
-                let treeChecksumFileInfo = { FileName = treeFileName; Checksum = inputConfigChecksum }
-                let { FileDirFullPath = treeFileTargetDir } = getFilePathInfo targetFullPath treeChecksumFileInfo
-                let treeFileNameWithChecksum = getChecksumFileName inputConfigChecksum treeFileName
-                let treeFileNode = 
-                    Input.getInputFileResult treeFileNameWithChecksum treeFileTargetDir treeFileType
-                    |> Option.get
-                    |> (fun item -> item.Node)
-
-                let treeFileRelationshipInfo: Neo4j.RelationShipInfo = 
-                    { SourceNode = simulationNode ; TargetNode = treeFileNode ; Relationship = "HAS_TREE" ; RelationshipProps = None }
+                createTreeFile checksumStr inputConfigChecksum targetFullPath
                 // Done with tree file
 
                 // Start dealing with output
@@ -179,22 +138,13 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let targetOutputWithChecksumFullPath = getTargetOutputWithChecksumFullPath targetFullPath inputConfigChecksum
                 // Side effect: copy output data to the target path
                 directoryCopy outputSourceFullPath targetOutputWithChecksumFullPath inputConfigChecksum false
-
+                
                 // Get the source output data path 
                 let outputFiles = getAllFilesInDirectory outputSourceFullPath
                 let outputFileNodes = Input.initOutputFileNodes outputFiles targetOutputWithChecksumFullPath inputConfigChecksum
-                let outputRelationshipInfos: Neo4j.RelationShipInfo list = 
-                    List.map (
-                        fun file -> 
-                            { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
-                    ) outputFileNodes
-                
                 // Side effect [tree file]: append the tree file with the output files in FS
                 updateTreeRelatedFiles outputFileNodes targetFullPath inputConfigChecksum
-                
                 // End of dealing with output
-
-                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
                 
                 // Start creating directory for the calculation
 
@@ -204,26 +154,37 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     List.pick (fun node -> match node with | Domain.FVCOMInput n -> Some n | _ -> None)
 
                 let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
-                
+                let inputConfigFileNode = getInputConfigFileNode configArgs inputConfigChecksum inputConfigFileType targetFullPath
                 let simulationInputFiles = inputConfigFileNode::inputFiles
                 
                 // Side effect [simulation folder]: Create the simulation folder in FS
                 createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFileNodes, targetOutputFullPath)
-                
                 // End of creating directory for the calculation
                 
                 // All side effects for DB:
                 // Side Effect: Delete All Previous Nodes if specified in DB
                 let shouldCleanAll = args.Contains(CleanAll)
                 if shouldCleanAll then
-                    Neo4j.deleteAllNodes()
+                    deleteAllNodes()
                 
+                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
+                let treeFileNode = getTreeFileNode inputConfigChecksum targetFullPath
+
                 let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFiles@outputFileNodes
                 // Side effect [all]: Create all the nodes in DB
-                Neo4j.createMultipleNodesIfNotExist allNodes
+                createMultipleNodesIfNotExist allNodes
                 
+                let inputRelationshipInfos = getInputRelationshipInfos simulationNode inputFilesWithType
+                let inputConfigFileRelationshipInfo = getInputConfigFileRelationshipInfo simulationNode inputConfigFileNode
+                let treeFileRelationshipInfo = getTreeFileRelationshipInfo simulationNode treeFileNode
+                let outputRelationshipInfos: RelationShipInfo list = 
+                    List.map (
+                        fun file -> 
+                            { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
+                    ) outputFileNodes
+                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
                 // Side effect [all]: Relate all the nodes with simulation in DB
-                Neo4j.relateMultipleNodes relationshipList
+                relateMultipleNodes relationshipList
                
                 Ok ()
             | Error e -> 
@@ -234,21 +195,21 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 printfn $"%s{ex.Message}"
                 Error ArgumentsNotSpecified
     | _ ->
-        Neo4j.deleteAllNodes()
+        deleteAllNodes()
         Ok ()
 
 let runList (runArgs: ParseResults<ListArgs>) =
     try 
         match runArgs with
         | args when args.Contains(All) ->
-            let result = Neo4j.getAllNodes ()
+            let result = getAllNodes ()
             printfn $"Result: %A{result} "
             Ok ()
         | args when args.Contains(Label) ->
             // Get the label
             let labelArgs = runArgs.GetResult(Label)
             // Get the nodes with specific label
-            let result = Neo4j.getNodesByLabel(labelArgs)
+            let result = getNodesByLabel(labelArgs)
             printfn $"Result: %A{result} "
             Ok ()
         | args when (args.Contains(Relationship) && args.Contains(Checksum)) ->
@@ -261,7 +222,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
                 match args.Contains(MaxPathLength) with
                 | true -> $"*..%s{runArgs.GetResult(MaxPathLength)}"
                 | false -> "*"
-            let result = Neo4j.getRelatedNodesPath((relationship, checksum, maxPathLength))
+            let result = getRelatedNodesPath((relationship, checksum, maxPathLength))
             printfn $"%A{result}"
             Ok ()
         | args when args.Contains(Relationship) ->
@@ -276,7 +237,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
                     match args.Contains(RelationshipPropertyValue) with
                     | true -> 
                         let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
-                        let result = Neo4j.getRelationships(r, Some relationshipProperty, Some relationshipPropertyValue)
+                        let result = getRelationships(r, Some relationshipProperty, Some relationshipPropertyValue)
                         printfn $"%A{result}"
                         Ok ()
                     | false ->
@@ -284,12 +245,12 @@ let runList (runArgs: ParseResults<ListArgs>) =
                         Error ArgumentsNotSpecified
                 | false ->
                     // Get the relationship with all properties if not specified
-                    let result = Neo4j.getRelationships(r, None, None)
+                    let result = getRelationships(r, None, None)
                     printfn $"%A{result}"
                     Ok ()
             | None ->
                 // Get all relationships if not specified
-                let result = Neo4j.getAllRelationship()
+                let result = getAllRelationship()
                 for i in result do
                     printfn $"%s{i}"
                 Ok ()
@@ -297,7 +258,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
             // Get the checksum
             let checksum = runArgs.GetResult(Checksum)
             // Get the nodes with specific checksum
-            let result = Neo4j.getNodeByChecksum(checksum)
+            let result = getNodeByChecksum(checksum)
             printfn $"%A{result}"
             Ok ()
         | _ -> 

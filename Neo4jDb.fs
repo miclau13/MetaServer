@@ -1,4 +1,4 @@
-module Neo4j
+module Neo4jDb
 open Neo4jClient
 open FSharp.Json
 
@@ -13,9 +13,6 @@ type NodeAttributes = {
     KeyValue: string
 }
 type Neo4jNode = {
-    // Path: string
-    // Name: string
-    // Format: string
     Checksum: string
 }
 

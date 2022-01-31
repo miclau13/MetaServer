@@ -22,7 +22,9 @@
     <Compile Include="./config/Input.fs" />
     <Compile Include="Settings.fs" />
     <Compile Include="Db.fs" />
-    <Compile Include="Neo4j.fs" />
+    <Compile Include="Neo4jDb.fs" />
+    <Compile Include="FVCOM\InputConfig.fs" />
+    <Compile Include="FVCOM\CommitTree.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
