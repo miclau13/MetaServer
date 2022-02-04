@@ -24,16 +24,13 @@ let getChecksum (str: string) =
     let result = bytes |> Array.fold (fun acc b -> acc + b.ToString("X2")) ""
     result
 
-let getChecksumInfoFromChecksumArray (checksums: string []) = 
+let getChecksumStrFromChecksumArray (checksums: string []) = 
     let checksumStr = 
         checksums 
         |> Array.reduce (fun acc item -> 
             $"%s{acc}\n%s{item}"
-        ) 
-    let checksum = 
-        checksumStr
-        |> getChecksum
-    (checksum, checksumStr)
+        )
+    checksumStr
 
 let FileWithChecksumRegex = 
     sprintf "(\w{40}-)(.*)"

@@ -769,12 +769,29 @@ let pickIOInput (nodes: Node list) =
       | _ -> None
   ) nodes
 
+let pickFVCOMInput (nodes: Node list) = 
+  List.pick (
+      function 
+      | FVCOMInput i -> Some i
+      | _ -> None
+  ) nodes
+  
+let pickFile (nodes: Node list) = 
+  List.pick (
+      function 
+      | File f -> Some f
+      | _ -> None
+  ) nodes
+  
+let chooseFiles (nodes: Node list) = 
+  List.choose (
+      function 
+      | File file -> Some file
+      | _ -> None
+  ) nodes
+
 let getIOInputDirectory (input: IOInput) = 
     let (InputDirectory dir) = input.InputDirectory 
-    dir
-
-let getIOOutputDirectory (input: IOInput) = 
-    let (OutputDirectory dir) = input.OutputDirectory 
     dir
 
 let getFile (inputDirectory: string) (node: Node) = 
@@ -793,26 +810,3 @@ let getExistingInputFiles (inputDirectory: string) (inputs: Node list) =
         |> Array.toList
         |> List.choose id
       files
-
-let getInputFilesToBeConverted (inputFiles: Node list) = 
-    inputFiles
-    |> List.choose (fun node -> match node with | File file -> Some file | _ -> None)
-    |> List.map (
-        fun file -> 
-            let fileNameWithFormat = getFileName file
-            let (Checksum checksum) = file.Checksum
-            let replacementFileName = getChecksumFileName checksum fileNameWithFormat
-            { Input = fileNameWithFormat ; Replacement = replacementFileName }
-    )
-  
-let convertConfigFileText (inputConfigText: string) (filesReplacement: InputConfigReplacement list) = 
-  let convertedConfigText =
-    filesReplacement
-    |> List.fold (
-      fun acc inputConfigReplacement -> 
-        acc |> stringReplacement inputConfigReplacement.Input inputConfigReplacement.Replacement
-    ) inputConfigText
-  convertedConfigText
-
-let convertConfigFileIOText (dir: string) (replacement: string) =
-  { Input = dir ; Replacement = replacement }

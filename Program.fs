@@ -5,13 +5,17 @@ open Argu
 open FileIO
 open FVCOM.CommitTree
 open FVCOM.InputConfig
+open Input
 open Neo4jDb
 open Parser
 open Util
 
+exception ParserEx of string
 type CliError =
     | ArgumentsNotSpecified
     | Neo4jError
+    | ParserError
+    | IOError
 
 type CmdArgs =
     | [<AltCommandLine("-p")>] Print of message:string
@@ -94,7 +98,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
             match configContentResult with
             | Ok r ->
-                let resultInDomain = r |> Input.parserResultToDomain
+                let resultInDomain = r |> parserResultToDomain
 
                 // Choose the items that have defined in the domain
                 // And unwrap the value from the result type
@@ -105,12 +109,13 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     |> Array.toList
 
                 // First, parse the input config file to get the directory of input
-                let IOInput = Input.pickIOInput nodes
-                let inputDirectory = Input.getIOInputDirectory IOInput
+                let ioInput = pickIOInput nodes
+                let inputDirectory = getIOInputDirectory ioInput
                 // Next, get the input files 
-                let inputFilesWithType = Input.getExistingInputFiles inputDirectory nodes
+                let inputFilesWithType = getExistingInputFiles inputDirectory nodes
                 // Start dealing with input files
-                let inputFiles = inputFilesWithType |> List.map (fun item -> item.Node)
+                let inputFileNodes = inputFilesWithType |> List.map (fun item -> item.Node)
+                let inputFiles = inputFileNodes |> chooseFiles
                 // Side effect [input files]: copy input files in FS
                 inputFiles
                 |> filterOutExistedFiles targetFullPath 
@@ -118,7 +123,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // End of dealing with input
 
                 // Start dealing with converting input config file
-                let convertedConfigText = inputFiles |> getConvertedConfigText inputDirectory configContent IOInput
+                let convertedConfigText = inputFiles |> getConvertedConfigText inputDirectory configContent ioInput
                 let inputConfigChecksum = getChecksum convertedConfigText
                 let inputConfigFileType = getInputConfigFileType ()
                 // Side effect [input config file]: Create the input config file in FS
@@ -126,39 +131,36 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 // Done with input config file
 
                 // Start dealing with tree file
-                let commitsChecksum = inputFiles |> Domain.getChecksumListArrayFromNodes
-                let _, checksumStr = getChecksumInfoFromChecksumArray commitsChecksum
                 // Side effect [tree file]: create the tree file in FS
-                createTreeFile checksumStr inputConfigChecksum targetFullPath
+                createTreeFile inputConfigChecksum inputFiles targetFullPath
                 // Done with tree file
 
                 // Start dealing with output
                 // Get the target path by tree checksum
-                let targetOutputFullPath = getTargetOutputFullPath targetFullPath
+                let targetOutputFullPath = getFullPath targetFullPath
                 let targetOutputWithChecksumFullPath = getTargetOutputWithChecksumFullPath targetFullPath inputConfigChecksum
                 // Side effect: copy output data to the target path
                 directoryCopy outputSourceFullPath targetOutputWithChecksumFullPath inputConfigChecksum false
                 
                 // Get the source output data path 
-                let outputFiles = getAllFilesInDirectory outputSourceFullPath
-                let outputFileNodes = Input.initOutputFileNodes outputFiles targetOutputWithChecksumFullPath inputConfigChecksum
+                let outputFileInfos = getAllFilesInDirectory outputSourceFullPath
+                let outputFileNodes = initOutputFileNodes outputFileInfos targetOutputWithChecksumFullPath inputConfigChecksum
+                let outputFiles = outputFileNodes |> chooseFiles
                 // Side effect [tree file]: append the tree file with the output files in FS
-                updateTreeRelatedFiles outputFileNodes targetFullPath inputConfigChecksum
+                updateTreeRelatedFiles inputConfigChecksum targetFullPath outputFiles 
                 // End of dealing with output
                 
                 // Start creating directory for the calculation
 
                 // Get the title from FVCOMInput
-                let FVCOMInputNode = 
-                    nodes |>
-                    List.pick (fun node -> match node with | Domain.FVCOMInput n -> Some n | _ -> None)
-
+                let FVCOMInputNode = nodes |> pickFVCOMInput
                 let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
+                
                 let inputConfigFileNode = getInputConfigFileNode configArgs inputConfigChecksum inputConfigFileType targetFullPath
-                let simulationInputFiles = inputConfigFileNode::inputFiles
+                let simulationInputFiles = inputConfigFileNode::inputFileNodes |> chooseFiles
                 
                 // Side effect [simulation folder]: Create the simulation folder in FS
-                createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFileNodes, targetOutputFullPath)
+                createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFiles, targetOutputFullPath)
                 // End of creating directory for the calculation
                 
                 // All side effects for DB:
@@ -170,7 +172,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
                 let treeFileNode = getTreeFileNode inputConfigChecksum targetFullPath
 
-                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFiles@outputFileNodes
+                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFileNodes@outputFileNodes
                 // Side effect [all]: Create all the nodes in DB
                 createMultipleNodesIfNotExist allNodes
                 
@@ -189,11 +191,16 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                 Ok ()
             | Error e -> 
                 let errorMessage = $"Input parsing failed: %A{e}"
-                failwith errorMessage
+                raise (ParserEx errorMessage)
         with 
-            ex -> 
-                printfn $"%s{ex.Message}"
-                Error ArgumentsNotSpecified
+            ex ->
+                match ex with
+                | ParserEx errorMsg -> 
+                    printfn $"%s{errorMsg}"
+                    Error ParserError
+                | _ ->
+                    printfn $"%s{ex.Message}"
+                    Error IOError
     | _ ->
         deleteAllNodes()
         Ok ()

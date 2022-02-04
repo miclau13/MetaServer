@@ -135,21 +135,17 @@ type Node =
   | FVCOMInput of FVCOMInput
   | IOInput of IOInput
 
-let getChecksumListArrayFromNodes (nodes: list<Node>)= 
-  nodes
+let getChecksumListArrayFromFiles (files: File list)= 
+  files
   |> Array.ofList
-  |> Array.Parallel.map (fun item -> 
-      match item with 
-      | File f -> 
-          let (Checksum checksum) = f.Checksum
-          let (Name fileName) = f.Name
-          match fileName with 
-          | Util.RegexGroup Util.FileWithChecksumRegex 0 fileName -> 
-            Some fileName
-          | _ -> Some $"%s{checksum}-%s{fileName}"
-      | _ ->  None
+  |> Array.Parallel.map (fun file -> 
+        let (Checksum checksum) = file.Checksum
+        let (Name fileName) = file.Name
+        match fileName with 
+        | Util.RegexGroup Util.FileWithChecksumRegex 0 fileName -> 
+          fileName
+        | _ -> $"%s{checksum}-%s{fileName}"
   )
-  |> Array.choose id
 
 let getFileName (file: File) =
     let (Name fileName) = file.Name

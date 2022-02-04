@@ -6,7 +6,7 @@ open System.Security.Cryptography
 open Domain
 open Util
 
-type FullPathInfo = {
+type PathInfo = {
     BasePath: string
     RelativePath: string
 }
@@ -24,7 +24,6 @@ type ChecksumFilePathInfo = {
 // Start of Get
 
 let getCalDirectory = "cal"
-let getTreeFileName = "tree.txt"
 let getTargetOutputDirectory = "output"
 
 let checkIfFileExist (path: string) =
@@ -52,7 +51,7 @@ let getChecksumFromFile (path: string) =
     else
         $"File %s{path} does not exist."
 
-let getFullPath (fullPathInfo: FullPathInfo) =
+let getFullPath (fullPathInfo: PathInfo) =
     let { BasePath = basePath ; RelativePath = relativePath } = fullPathInfo
     match basePath with 
     | "." | "" | "./" -> 
@@ -61,7 +60,7 @@ let getFullPath (fullPathInfo: FullPathInfo) =
     | path -> 
         Path.Combine(path, relativePath)
 
-let getFilePathInfo (directoryFullPathInfo: FullPathInfo) (checksumFileInfo: ChecksumFileInfo) = 
+let getFilePathInfo (directoryFullPathInfo: PathInfo) (checksumFileInfo: ChecksumFileInfo) = 
     let { FileName = fileName; Checksum = checksum } = checksumFileInfo
     let checksumDirectory = getChecksumDirFromChecksum checksum
     let fileNameWithChecksum = getChecksumFileName checksum fileName
@@ -72,7 +71,7 @@ let getFilePathInfo (directoryFullPathInfo: FullPathInfo) (checksumFileInfo: Che
     let fileFullPath = Path.Combine(directoryWithChecksumFullPath, fileNameWithChecksum)
     { FileFullPath = fileFullPath; FileDirFullPath = directoryWithChecksumFullPath }
 
-let getChecksumFilePathInfo (directoryFullPathInfo: FullPathInfo) (file: File) =
+let getChecksumFilePathInfo (directoryFullPathInfo: PathInfo) (file: File) =
     
     let (Checksum checksum) = file.Checksum
     let fileName = getFileName file
@@ -88,7 +87,7 @@ let getCalDirectoryFullPath (basePath: string) =
     let calDirectoryFullPath = getFullPath fullPathInfo
     calDirectoryFullPath
 
-let isInputFileExisted (fullPathInfo: FullPathInfo) (file: File) =
+let isInputFileExisted (fullPathInfo: PathInfo) (file: File) =
     let targetDirectoryWithBasePath = getFullPath fullPathInfo
 
     let (Checksum checksum) = file.Checksum
@@ -101,7 +100,7 @@ let isInputFileExisted (fullPathInfo: FullPathInfo) (file: File) =
     checkIfFileExist targetPath
 
 // The logic is filename with sha1-checksum meaning existed
-let isFileExisted (fullPathInfo: FullPathInfo) (inputFile: File)  = 
+let isFileExisted (fullPathInfo: PathInfo) (inputFile: File)  = 
     let (Name fileName) = inputFile.Name
     match fileName with 
     | RegexGroup FileWithChecksumRegex 0 fileName  -> 
@@ -110,31 +109,12 @@ let isFileExisted (fullPathInfo: FullPathInfo) (inputFile: File)  =
     | _ -> 
         isInputFileExisted fullPathInfo inputFile
 
-let getFilePathResult (fullPathInfo: FullPathInfo) (node: Node) =
-    match node with 
-    | File file -> 
-        let info = getChecksumFilePathInfo fullPathInfo file
-        Some info
-    | _ -> 
-        printfn $"The Node is not a file, cannot get file Path: %A{node}"
-        None
+let getFilesPath (fullPathInfo: PathInfo) (files: File list) =
+    files
+    |> List.map (getChecksumFilePathInfo fullPathInfo)
 
-let getFilesPath (fullPathInfo: FullPathInfo) (nodes: Node list) =
-    nodes
-    |> List.map (fun file -> 
-            getFilePathResult fullPathInfo file
-        )
-    |> List.filter Option.isSome
-    |> List.map Option.get
-
-let getTargetOutputFullPath (fullPathInfo: FullPathInfo) =
-    let targetDirectoryFullPath = getFullPath fullPathInfo
-//    let targetDirectoryWithOutputFullPath = Path.Combine(targetDirectoryFullPath, getTargetOutputDirectory)
-//    targetDirectoryWithOutputFullPath
-    targetDirectoryFullPath
-
-let getTargetOutputWithChecksumFullPath (fullPathInfo: FullPathInfo) (checksum: string) =
-    let targetDirectoryWithOutputFullPath = getTargetOutputFullPath fullPathInfo
+let getTargetOutputWithChecksumFullPath (fullPathInfo: PathInfo) (checksum: string) =
+    let targetDirectoryWithOutputFullPath = getFullPath fullPathInfo
     let checksumDirectory = getChecksumDirFromChecksum checksum
     let targetOutputFullPath = Path.Combine(targetDirectoryWithOutputFullPath, checksumDirectory)
     targetOutputFullPath
@@ -170,7 +150,7 @@ let createDirectoryIfNotExist path =
     else  
         printfn $"Directory(%A{path}) exists, no need to create."
 
-let copyFile (sourceBasePath: string, sourceDirectory: string) (targetFullPath: FullPathInfo) (file: File) =
+let copyFile (sourceBasePath: string, sourceDirectory: string) (targetFullPath: PathInfo) (file: File) =
     let sourceFileNameWithFormat = getFileName file
     let sourceFileDir = Path.Combine (sourceBasePath, sourceDirectory)
     let sourcePath = Path.Combine (sourceFileDir, sourceFileNameWithFormat)
@@ -190,17 +170,12 @@ let copyFile (sourceBasePath: string, sourceDirectory: string) (targetFullPath: 
     // decompressFile (targetPath+".gz") (targetPath+".unzip")
     // sprintf "%s-%s" checksum fileName
 
-let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: string) (inputFiles: list<Node>)  = 
+let copyInputFiles (basePath: string, sourceDirectory: string, outputDirectory: string) (inputFiles: File list)  = 
+    let fullPathInfo = { BasePath = basePath ; RelativePath = outputDirectory }
     inputFiles
-    |> List.iter (fun item -> 
-        match item with 
-        | File f -> 
-            let fullPathInfo = { BasePath = basePath ; RelativePath = outputDirectory }
-            copyFile (basePath, sourceDirectory) fullPathInfo f
-        | _ ->  printfn $"Item is not copied because it is not defined in the domain: %A{item}"
-    )
+    |> List.iter (copyFile (basePath, sourceDirectory) fullPathInfo)
 
-let createFile (content: string, fileName: string, fileType: string, checksum: string) (fullPathInfo: FullPathInfo) = 
+let createFile (content: string, fileName: string, fileType: string, checksum: string) (fullPathInfo: PathInfo) = 
     // Get the file path info
     let checksumFileInfo = { FileName = fileName; Checksum = checksum }
     let { FileFullPath = targetPath ; FileDirFullPath = targetDir } = getFilePathInfo fullPathInfo checksumFileInfo 
@@ -221,15 +196,9 @@ let createFile (content: string, fileName: string, fileType: string, checksum: s
     else 
         printfn $"TargetPath (%s{targetPath}) already exists"
 
-let filterOutExistedFiles (targetFullPath: FullPathInfo) (inputFiles: list<Node> ) = 
-    inputFiles
-    |> List.filter(fun item -> 
-        match item with 
-        | File f -> not <| isFileExisted targetFullPath  f
-        | _ ->  
-            printfn "Item is not defined in the domain" 
-            true
-    )
+let filterOutExistedFiles (targetPathInfo: PathInfo) (files: File list ) = 
+    files
+    |> List.filter ((isFileExisted targetPathInfo) >> not)
 
 // Create the cal directory
 let createCalDirectoryIfNotExist (basePath: string) =
@@ -249,7 +218,7 @@ let createSimulationDirectoryIfNotExist (checksum: string) (caseTitle: string) (
     let outputDirWithBasePath = Path.Combine(simDirectoryWithBasePath, "output")
     createDirectoryIfNotExist outputDirWithBasePath
 
-let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: string) (inputFiles: Node list, inputTargetDir: string) (outputFiles: Node list, outputTargetDir: string) =
+let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: string) (inputFiles: File list, inputTargetDir: string) (outputFiles: File list, outputTargetDir: string) =
     let currentTimeStamp = DateTime.Now.ToString("yyyyMMddHHmm")
 
     // Create Cal Dir
@@ -291,25 +260,17 @@ let createSimulationFolder (checksum: string) (caseTitle: string) (basePath: str
                 printfn $"%s{symbolicLinkPath}--- symbolic link --->%s{fileFullPath} is Created"
     )
 
-let updateTreeRelatedFiles (files: Node list) (fullPathInfo: FullPathInfo) (commitChecksum: string) = 
-    // Get the tree path info
-    let treeChecksumFileInfo = { FileName = getTreeFileName; Checksum = commitChecksum }
-    let { FileFullPath = targetPath } = getFilePathInfo fullPathInfo treeChecksumFileInfo 
-
-    // Append the files name to related files
-    let commitChecksums = files |> getChecksumListArrayFromNodes
-    let _, checksumStr = getChecksumInfoFromChecksumArray commitChecksums
-    
+let updateFile (content: string) (targetPath: string) = 
     if checkIfFileExist targetPath then
         try
             let fs = IO.File.AppendText targetPath
-            let info = $"%s{Environment.NewLine}%s{checksumStr}"
+            let info = $"%s{Environment.NewLine}%s{content}"
             fs.WriteLine(info)
-            printfn $"Tree Content Updated with %A{info}" 
+            printfn $"Content Updated with %A{info}" 
             fs.Close()
         with 
             ex -> 
-                printfn $"Tree Content did not updated, with Error: %s{ex.Message}"
+                printfn $"Content did not updated, with Error: %s{ex.Message}"
     else 
         printfn $"TargetPath (%s{targetPath}) does not exists, did not update the content."
     
