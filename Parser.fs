@@ -1,4 +1,4 @@
-module Parser
+module Parser1
 
 open FParsec
 

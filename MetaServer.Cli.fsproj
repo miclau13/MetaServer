@@ -9,6 +9,9 @@
     <PackageOutputPath>../nupkg</PackageOutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Parser">  <!--the name here can be anything-->
+      <HintPath>lib/Parser.dll</HintPath>
+    </Reference>
     <Compile Include="Util.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="Json.fs" />
@@ -26,9 +29,11 @@
     <Compile Include="FVCOM\InputConfig.fs" />
     <Compile Include="FVCOM\CommitTree.fs" />
     <Compile Include="Program.fs" />
+    <Content Include="lib\Parser.dll" />
   </ItemGroup>
 
   <ItemGroup>
+    
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="FParsec" Version="1.1.1" />
     <PackageReference Include="FSharp.Json" Version="0.4.1" />

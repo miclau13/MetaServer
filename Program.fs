@@ -94,7 +94,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             // Get the content from the config file
             let configContent = IO.File.ReadAllText configArgs
             // Run the parser on the config file
-            let configContentResult = parseContent configContent
+            let configContentResult = parseContent FVCOM configContent
 
             match configContentResult with
             | Ok r ->
