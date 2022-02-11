@@ -133,7 +133,7 @@
  PRECIPITATION_EVP       =  0.0000000E+00,
  AIRPRESSURE_ON  = F,
  AIRPRESSURE_KIND        = 'variable'                        ,
- AIRPRESSURE_FILE        = 'Titania_nest_all.nc'                                                   ,
+ AIRPRESSURE_FILE        = 'Titania_nest_allT.nc'                                                   ,
  AIRPRESSURE_VALUE       =  1.0000000E+5,
  WAVE_ON = F,
  WAVE_FILE       = 'Titania_wnd_all.nc'                                                         ,

@@ -6,6 +6,18 @@ open System.Security.Cryptography
 open Domain
 open Util
 
+type FullPath = FullPath of string
+type FileName = FileName of string
+
+type FileMeta = {
+  FullPath: FullPath
+  Name: FileName
+}
+
+type DirectoryMeta = {
+  FullPath: FullPath
+}
+
 type PathInfo = {
     BasePath: string
     RelativePath: string

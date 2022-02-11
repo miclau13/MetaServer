@@ -1,6 +1,7 @@
 module Util
 
 // create an active pattern
+open System.IO
 open System.Text.RegularExpressions
 open System.Security.Cryptography
 
@@ -48,3 +49,11 @@ let getChecksumDirFromChecksum (checksum: string) =
 
 let getSimulationDirectoryPath (checksum: string, caseTitle: string, timestamp: string) = 
     $"%s{checksum}-%s{caseTitle}-%s{timestamp}"
+    
+let getFullPath (basePath: string, relativePath: string) =
+    match basePath with 
+    | "." | "" | "./" -> 
+        let currentDirectory = Directory.GetCurrentDirectory()
+        Path.Combine(currentDirectory, relativePath)
+    | path -> 
+        Path.Combine(path, relativePath)

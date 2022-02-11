@@ -120,7 +120,7 @@
  HEATING_ON      = F,
  HEATING_TYPE    = 'flux'                                                                ,
  HEATING_KIND    = 'variable'                        ,
- HEATING_FILE    = 'Titania_nest_all.nc'                                                              ,
+ HEATING_FILE    = 'Titania_nest_allT.nc'                                                              ,
  HEATING_LONGWAVE_LENGTHSCALE    =   1.400000    ,
  HEATING_LONGWAVE_PERCTAGE       =  0.7800000    ,
  HEATING_SHORTWAVE_LENGTHSCALE   =   6.300000    ,
@@ -310,7 +310,7 @@
  FABM_NESTING_ON  = F,
  NESTING_TYPE    = '1'                                                               ,
  NESTING_BLOCKSIZE       =          2,
- NESTING_FILE_NAME       = 'Titania_nest_all.nc'                                                                
+ NESTING_FILE_NAME       = 'Titania_nest_allT.nc'                                                                
  /
  &NML_STATION_TIMESERIES
  OUT_STATION_TIMESERIES_ON       = F,

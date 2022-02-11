@@ -38,8 +38,24 @@ let interpret program =
 //  createFile file
 //  |> interpret
 //  |> Async.RunSynchronously
-  
+
+let copyTestDirectoryApi copyDirectoryInput =
+  FileIOInstruction.Shell.copyDirectory copyDirectoryInput
+  |> interpret
+  |> Async.RunSynchronously
 let copyTestFileApi (sourceFilePath, destFilePath) =
   FileIOInstruction.Shell.copyFile (sourceFilePath, destFilePath)
+  |> interpret
+  |> Async.RunSynchronously
+let createTestDirectoryApi directoryPath =
+  FileIOInstruction.Shell.createDirectoryOnly directoryPath
+  |> interpret
+  |> Async.RunSynchronously
+let createTestFileApi (destFilePath, content) =
+  FileIOInstruction.Shell.createFileOnly (destFilePath, content)
+  |> interpret
+  |> Async.RunSynchronously
+let updateTestFileApi (destFilePath, content) =
+  FileIOInstruction.Shell.updateFileOnly (destFilePath, content)
   |> interpret
   |> Async.RunSynchronously

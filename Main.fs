@@ -1,6 +1,7 @@
 // Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
 
 open System
+open System.IO
 open Argu
 open FileIO
 open FVCOM.CommitTree
@@ -21,6 +22,7 @@ type CmdArgs =
     | [<AltCommandLine("-p")>] Print of message:string
     | [<CliPrefix(CliPrefix.None)>] List of ParseResults<ListArgs>
     | [<CliPrefix(CliPrefix.None)>] Init of ParseResults<InitArgs>
+    | [<CliPrefix(CliPrefix.None)>] TestInit of ParseResults<TestInitArgs>
 
 with
     interface IArgParserTemplate with
@@ -29,6 +31,25 @@ with
             | Print _ -> "Print a message"
             | List _ -> "List node(s)"
             | Init _ -> "Init nodes and relationships"
+            | TestInit _ -> "Testing"
+and TestInitArgs =
+    | [<AltCommandLine("-a")>] TAll
+    | [<AltCommandLine("-c")>] TConfig of msg:string
+    | [<AltCommandLine("-bp")>] TBasePath of msg:string option
+    | [<AltCommandLine("-isd")>] TInputSourceDirectory of msg:string option
+    | [<AltCommandLine("-osd")>] TOutputSourceDirectory of msg:string option
+    | [<AltCommandLine("-od")>] TTargetDirectory of msg:string option
+    | [<AltCommandLine("-ca")>] TCleanAll
+    interface IArgParserTemplate with
+        member this.Usage =
+            match this with
+            | TAll -> "Init all."
+            | TConfig _ -> "Read the config."
+            | TBasePath _ -> "Specify the base path."
+            | TInputSourceDirectory _ -> "Specify the input source directory."
+            | TOutputSourceDirectory _ -> "Specify the output source directory."
+            | TTargetDirectory _ -> "Specify the target directory."
+            | TCleanAll _ -> "Clean all previous nodes."
 and InitArgs =
     | [<AltCommandLine("-a")>] All
     | [<AltCommandLine("-c")>] Config of msg:string
@@ -87,7 +108,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             let targetDirectoryArgs = runArgs.GetResult(TargetDirectory, Some "data")
             let targetDirectory = defaultArg targetDirectoryArgs "data"
 
-            let outputSourceFullPath = getFullPath { BasePath = basePath ; RelativePath = outputSourceDirectory }
+            let outputSourceFullPath = FileIO.getFullPath { BasePath = basePath ; RelativePath = outputSourceDirectory }
             let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
 
             // Start dealing with input
@@ -137,7 +158,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
 
                 // Start dealing with output
                 // Get the target path by tree checksum
-                let targetOutputFullPath = getFullPath targetFullPath
+                let targetOutputFullPath = FileIO.getFullPath targetFullPath
                 let targetOutputWithChecksumFullPath = getTargetOutputWithChecksumFullPath targetFullPath inputConfigChecksum
                 // Side effect: copy output data to the target path
                 directoryCopy outputSourceFullPath targetOutputWithChecksumFullPath inputConfigChecksum false
@@ -281,11 +302,187 @@ let getExitCode result =
         match err with
         | _ -> 1
 
-let runPrint (print: string) =
-//    let fileName = FileName print
-//    let file = { Name = fileName ; FullPath = FullPath ""  }
-    Command.copyTestFileApi ("./input/gen_sed4.inp", "./") |> ignore
-    Ok ()
+let runTest (runArgs: ParseResults<TestInitArgs>) =
+    match runArgs with
+    | args when args.Contains(TConfig) ->
+        // Get the config
+        let configArgs = runArgs.GetResult(TConfig)
+        try
+            // Get the base path 
+            let basePathArgs = runArgs.GetResult(TBasePath, Some ".")
+            let basePath = defaultArg basePathArgs "."
+            // Get the input source directory if any
+            let inputSourceDirectoryArgs = runArgs.GetResult(TInputSourceDirectory, Some "input")
+            let inputSourceDirectory = defaultArg inputSourceDirectoryArgs "input"
+            let inputSourceDirFullPath = getFullPath(basePath, inputSourceDirectory)
+            // Get the output source directory if any
+            let outputSourceDirectoryArgs = runArgs.GetResult(TOutputSourceDirectory, Some "output")
+            let outputSourceDirectory = defaultArg outputSourceDirectoryArgs "output"
+            let outputSourceDirectoryFullPath = getFullPath(basePath, outputSourceDirectory)
+            // Get the output directory if any
+            let targetDirectoryArgs = runArgs.GetResult(TTargetDirectory, Some "test")
+            let targetDirectory = defaultArg targetDirectoryArgs "test"
+            let targetDirectoryFullPath = getFullPath(basePath, targetDirectory)
+
+//            let outputSourceFullPath = getFullPath { BasePath = basePath ; RelativePath = outputSourceDirectory }
+            let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
+
+            // Start dealing with input
+            // Get the content from the config file
+            let configContent = IO.File.ReadAllText configArgs
+            // Run the parser on the config file
+            let configContentResult = parseContent FVCOM configContent
+
+            match configContentResult with
+            | Ok r ->
+                let resultInDomain = r |> parserResultToDomain
+
+                // Choose the items that have defined in the domain
+                // And unwrap the value from the result type
+                // Then convert to list
+                let nodes = 
+                    resultInDomain 
+                    |> Array.choose (function | Ok v -> Some v | _ -> None)
+                    |> Array.toList
+
+                // First, parse the input config file to get the directory of input
+                let ioInput = pickIOInput nodes
+                let inputDirectory = getIOInputDirectory ioInput
+                // Next, get the input files 
+                let inputFilesWithType = getExistingInputFiles inputDirectory nodes
+                // Start dealing with input files
+                let inputFileNodes = inputFilesWithType |> List.map (fun item -> item.Node)
+                let inputFiles = inputFileNodes |> chooseFiles
+                // Side effect [input files]:
+                // 1. Create target Dir to store the input files
+                // 2. copy input files in FS
+                Command.createTestDirectoryApi targetDirectory |> ignore
+                let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+                inputFiles
+                |> filterOutExistedFiles targetFullPath
+                |> List.toArray
+                |> Array.Parallel.iter (
+                    fun (inputFile: Domain.File) ->
+                        let fileName = Domain.getFileName inputFile
+                        let (Domain.Checksum fileChecksum) = inputFile.Checksum
+                        let fileChecksumDir = getChecksumDirFromChecksum fileChecksum
+                        let fileChecksumDirFullPath = getFullPath(targetDirectoryFullPath, fileChecksumDir)
+                        Command.createTestDirectoryApi fileChecksumDirFullPath |> ignore
+                        
+                        let sourceInputFilePath = getFullPath(inputSourceDirFullPath, fileName)
+                        let destInputFileName = getChecksumFileName fileChecksum fileName
+                        let destInputFilePath = getFullPath(fileChecksumDirFullPath, destInputFileName)
+                        Command.copyTestFileApi (sourceInputFilePath, destInputFilePath) |> ignore
+//                        let sourceFilePath = inputSourceDirFullPath
+                    )
+                stopWatch.Stop()
+                printfn $"Copy input files Time: %f{stopWatch.Elapsed.TotalMilliseconds}"
+                // End of dealing with input
+//
+//                // Start dealing with converting input config file
+                let convertedConfigText = inputFiles |> getConvertedConfigText inputDirectory configContent ioInput
+                let inputConfigChecksum = getChecksum convertedConfigText
+                // Side effect [input config file]: Create the input config file in FS
+                let createFile (fileName: string, fileChecksum: string, fileContent: string, targetDirectoryFullPath: string ) =
+                    let fileChecksumDir = getChecksumDirFromChecksum fileChecksum
+                    let fileChecksumDirFullPath = getFullPath(targetDirectoryFullPath, fileChecksumDir)
+                    Command.createTestDirectoryApi fileChecksumDirFullPath |> ignore
+                    
+                    let destInputFileName = getChecksumFileName fileChecksum fileName
+                    let destInputFilePath = getFullPath(fileChecksumDirFullPath, destInputFileName)
+                    Command.createTestFileApi (destInputFilePath, fileContent) |> ignore
+                let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+                createFile(configArgs, inputConfigChecksum, convertedConfigText, targetDirectoryFullPath)
+                stopWatch.Stop()
+                printfn $"Create input config files Time: %f{stopWatch.Elapsed.TotalMilliseconds}"
+                // Done with input config file
+//
+                // Start dealing with tree file
+                // Side effect [tree file]: create the tree file in FS
+                let checksumStr = getTreeRelatedFilesStr inputFiles
+                let currentTimeStamp = DateTime.UtcNow.ToString()
+                let currentUser = Environment.UserName
+                let commit = getChecksumFileName inputConfigChecksum "tree"
+                let treeContent = 
+                    $"commit %s{commit}\nAuthor: %s{currentUser}\nDate: %s{currentTimeStamp}\nRelated files: \n%s{checksumStr}"
+                let { Name = treeFileName; Type = treeFileType } = getTreeFileInfo ()
+                let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+                createFile(treeFileName, inputConfigChecksum, treeContent, targetDirectoryFullPath)
+                stopWatch.Stop()
+                printfn $"Create tree files Time: %f{stopWatch.Elapsed.TotalMilliseconds}"
+                // Done with tree file
+
+                // Start dealing with output
+                // Side effect: copy output data to the target path
+                let outputDestChecksumDir = getChecksumDirFromChecksum inputConfigChecksum
+                let outputDestFullDir = getFullPath(targetDirectoryFullPath, outputDestChecksumDir)
+                let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+                Command.copyTestDirectoryApi (outputSourceDirectoryFullPath, outputDestFullDir, Some(inputConfigChecksum)) |> ignore
+                stopWatch.Stop()
+                printfn $"Copy Directory Time: %f{stopWatch.Elapsed.TotalMilliseconds}" 
+                // Get the source output data path 
+//                let outputFileInfos = getAllFilesInDirectory outputSourceFullPath
+//                let outputFileNodes = initOutputFileNodes outputFileInfos targetOutputWithChecksumFullPath inputConfigChecksum
+//                let outputFiles = outputFileNodes |> chooseFiles
+//                // Side effect [tree file]: append the tree file with the output files in FS
+//                updateTreeRelatedFiles inputConfigChecksum targetFullPath outputFiles 
+                // End of dealing with output
+//                
+//                // Start creating directory for the calculation
+//
+//                // Get the title from FVCOMInput
+//                let FVCOMInputNode = nodes |> pickFVCOMInput
+//                let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
+//                
+//                let inputConfigFileNode = getInputConfigFileNode configArgs inputConfigChecksum inputConfigFileType targetFullPath
+//                let simulationInputFiles = inputConfigFileNode::inputFileNodes |> chooseFiles
+//                
+//                // Side effect [simulation folder]: Create the simulation folder in FS
+//                createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFiles, targetOutputFullPath)
+//                // End of creating directory for the calculation
+//                
+//                // All side effects for DB:
+//                // Side Effect: Delete All Previous Nodes if specified in DB
+//                let shouldCleanAll = args.Contains(CleanAll)
+//                if shouldCleanAll then
+//                    deleteAllNodes()
+//                
+//                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
+//                let treeFileNode = getTreeFileNode inputConfigChecksum targetFullPath
+//
+//                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFileNodes@outputFileNodes
+//                // Side effect [all]: Create all the nodes in DB
+//                createMultipleNodesIfNotExist allNodes
+//                
+//                let inputRelationshipInfos = getInputRelationshipInfos simulationNode inputFilesWithType
+//                let inputConfigFileRelationshipInfo = getInputConfigFileRelationshipInfo simulationNode inputConfigFileNode
+//                let treeFileRelationshipInfo = getTreeFileRelationshipInfo simulationNode treeFileNode
+//                let outputRelationshipInfos: RelationShipInfo list = 
+//                    List.map (
+//                        fun file -> 
+//                            { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
+//                    ) outputFileNodes
+//                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
+//                // Side effect [all]: Relate all the nodes with simulation in DB
+//                relateMultipleNodes relationshipList
+//               
+                Ok ()
+            | Error e -> 
+                let errorMessage = $"Input parsing failed: %A{e}"
+                raise (ParserEx errorMessage)
+        with 
+            ex ->
+                match ex with
+                | ParserEx errorMsg -> 
+                    printfn $"%s{errorMsg}"
+                    Error ParserError
+                | _ ->
+                    printfn $"%s{ex.Message}"
+                    Error IOError
+    | _ ->
+        let runArgsParser = ArgumentParser.Create<TestInitArgs>()
+        printfn $"%s{runArgsParser.PrintUsage()}"
+        Error ArgumentsNotSpecified
 
 [<EntryPoint>]
 let main argv = 
@@ -293,7 +490,8 @@ let main argv =
     let parser = ArgumentParser.Create<CmdArgs>(programName = "metaserver", errorHandler = errorHandler)
     
     match parser.ParseCommandLine argv with
-    | p when p.Contains(Print) -> runPrint (p.GetResult(Print))
+//    | p when p.Contains(Print) -> runPrint (p.GetResult(Print))
+    | p when p.Contains(TestInit) -> runTest (p.GetResult(TestInit))
     | p when p.Contains(List) -> runList (p.GetResult(List))
     | p when p.Contains(Init) -> runInit (p.GetResult(Init))
     | _ ->
