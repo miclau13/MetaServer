@@ -383,9 +383,14 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
                 let convertedConfigText = inputFiles |> getConvertedConfigText inputDirectory configContent ioInput
                 let inputConfigChecksum = getChecksum convertedConfigText
                 // Side effect [input config file]: Create the input config file in FS
-                let createFile (fileName: string, fileChecksum: string, fileContent: string, targetDirectoryFullPath: string ) =
+                // TODO1 put these function to other file
+                let getFileChecksumDirFullPath (fileChecksum: string, destDirFullPath: string) =
                     let fileChecksumDir = getChecksumDirFromChecksum fileChecksum
-                    let fileChecksumDirFullPath = getFullPath(targetDirectoryFullPath, fileChecksumDir)
+                    let fileChecksumDirFullPath = getFullPath(destDirFullPath, fileChecksumDir)
+                    fileChecksumDirFullPath
+
+                let createFile (fileName: string, fileChecksum: string, fileContent: string, destDirFullPath: string) =
+                    let fileChecksumDirFullPath = getFileChecksumDirFullPath (fileChecksum, destDirFullPath)
                     Command.createTestDirectoryApi fileChecksumDirFullPath |> ignore
                     
                     let destInputFileName = getChecksumFileName fileChecksum fileName
@@ -421,11 +426,19 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
                 stopWatch.Stop()
                 printfn $"Copy Directory Time: %f{stopWatch.Elapsed.TotalMilliseconds}" 
                 // Get the source output data path 
-//                let outputFileInfos = getAllFilesInDirectory outputSourceFullPath
-//                let outputFileNodes = initOutputFileNodes outputFileInfos targetOutputWithChecksumFullPath inputConfigChecksum
-//                let outputFiles = outputFileNodes |> chooseFiles
-//                // Side effect [tree file]: append the tree file with the output files in FS
-//                updateTreeRelatedFiles inputConfigChecksum targetFullPath outputFiles 
+                let outputFileInfos = getAllFilesInDirectory outputSourceDirectoryFullPath
+                let outputFileNodes = initOutputFileNodes outputFileInfos outputDestFullDir inputConfigChecksum
+                let outputFiles = outputFileNodes |> chooseFiles
+                // Side effect [tree file]: append the tree file with the output files in FS
+                let outputChecksumStr = getTreeRelatedFilesStr outputFiles
+                let treeChecksumDirFullPath = getFileChecksumDirFullPath (inputConfigChecksum, targetDirectoryFullPath)
+                let treeDestFileName = getChecksumFileName inputConfigChecksum treeFileName
+                let treeDestFileFullPath = getFullPath(treeChecksumDirFullPath, treeDestFileName)
+//                updateTreeRelatedFiles inputConfigChecksum targetFullPath outputFiles
+                let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+                Command.updateTestFileApi (treeDestFileFullPath, outputChecksumStr) |> ignore
+                stopWatch.Stop()
+                printfn $"Update Tree file Time: %f{stopWatch.Elapsed.TotalMilliseconds}" 
                 // End of dealing with output
 //                
 //                // Start creating directory for the calculation
