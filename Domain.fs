@@ -1,6 +1,9 @@
 module Domain 
-  
+
+open IOInput
+open Logger
 open System
+open Util
 type RelationShip = {
   Direction: Direction
   Node: string
@@ -104,7 +107,7 @@ type File = {
   Checksum: Checksum
 }
 
-type FileWithConfigTypeOnly = {
+type ConfigFileInput = {
   ConfigType: FileType
   File: InputFile
 }
@@ -130,11 +133,19 @@ type Simulation = {
 
 type Node = 
   | File of File
-  | ConfigFileInput of FileWithConfigTypeOnly
+  | ConfigFileInput of ConfigFileInput
   | Simulation of Simulation
   | FVCOMInput of FVCOMInput
   | IOInput of IOInput
 
+type RelativePath = RelativePath of string
+type FullPath = FullPath of string
+type BasePath = FullPath
+
+type FileNode = {
+  Node: Node
+  Type: FileType
+}
 let getChecksumListArrayFromFiles (files: File list)= 
   files
   |> Array.ofList
@@ -142,12 +153,175 @@ let getChecksumListArrayFromFiles (files: File list)=
         let (Checksum checksum) = file.Checksum
         let (Name fileName) = file.Name
         match fileName with 
-        | Util.RegexGroup Util.FileWithChecksumRegex 0 fileName -> 
+        | RegexGroup FileWithChecksumRegex 0 fileName -> 
           fileName
         | _ -> $"%s{checksum}-%s{fileName}"
   )
 
+let getIOInputDirectory (input: IOInput) = 
+    let (InputDirectory dir) = input.InputDirectory 
+    RelativePath dir
+
+let checkIfFileExist (filePath: FullPath) =
+    let (FullPath path) = filePath
+    checkIfFileExist path
+let checkIfDirectoryExist (dirPath: FullPath) =
+    let (FullPath path) = dirPath
+    checkIfDirectoryExist path
+
+let getFullPath (basePath: BasePath, relativePath: RelativePath) =
+    let (FullPath basePath') = basePath
+    let (RelativePath relativePath') = relativePath
+    let fullPath = getFullPath (basePath', relativePath')
+    FullPath fullPath
+
+let getChecksumFromFilePath (filePath: FullPath) =
+    let (FullPath path) = filePath
+    try
+        Ok (getChecksumFromFile path)
+    with
+    | exn -> 
+        let errorMsg = $"Cannot get checksum from file path ({path}) with error: ({exn})."
+        let error = Error errorMsg
+        logResult error |> ignore
+        error
+
+let tryConvertFileNodeFromConfigFile (inputDirectory: FullPath) (configFile: ConfigFileInput) =
+  let (InputFile fileName) = configFile.File
+  let configFileType = configFile.ConfigType
+  let file = RelativePath fileName
+  let (FullPath inputDir) = inputDirectory
+  match fileName with
+  | RegexGroup "\." 0 _ ->
+    let name, format = getFileNameAndFormat fileName
+    let filePath = getFullPath(inputDirectory, file)
+    if checkIfFileExist filePath then
+      let checksum = 
+        // If input is in nc format, check if it has checksum in its file name
+        // If yes then use the checksum directly, otherwise generate checksum 
+        match name with 
+        | RegexGroup FileWithChecksumRegex 0 name  -> 
+          name
+        | _ ->
+            match getChecksumFromFilePath filePath with
+            | Ok checksum -> checksum
+            | Error error -> failwith error
+      let file = File {
+          Path = Path inputDir
+          Name = Name name
+          Format = Format format
+          Checksum = Checksum checksum
+      }
+      Some { Node = file ; Type = configFileType }
+    else 
+      let errorMsg = $"File (%s{fileName}) does not exist at the path ({inputDirectory})."
+      let error = Error errorMsg
+      logResult error |> ignore
+      failwith errorMsg
+  | _ ->  
+      let infoMsg = $"Input File (name: %s{fileName}, configType: {configFileType}) is not created"
+      let info = Ok infoMsg
+      logResult info |> ignore
+      None
+      
+let tryGetFileNode (inputDirectory: FullPath) (node: Node) = 
+    match node with 
+    | Simulation _ | File _ | IOInput _ | FVCOMInput _ -> None
+    | ConfigFileInput configFile -> 
+        tryConvertFileNodeFromConfigFile inputDirectory configFile
+
+let getExistingInputFiles (inputDirectory: FullPath) (inputs: Node list) =  
+      let files = 
+        inputs
+        |> Array.ofList
+        |> Array.Parallel.map (tryGetFileNode inputDirectory) 
+        |> Array.toList
+        |> List.choose id
+      files
+
+let getChecksumDirFromChecksum (checksum: Checksum) = 
+    let (Checksum checksum') = checksum
+    let directoryLevel1 = getChecksumDirFromChecksum checksum'
+    RelativePath directoryLevel1
+
 let getFileName (file: File) =
-    let (Name fileName) = file.Name
-    let (Format fileFormat) = file.Format
-    $"%s{fileName}.%s{fileFormat}"
+    let { Name = Name name; Format = Format format } = file
+    RelativePath $"%s{name}.%s{format}"
+    
+let getFileNameWithChecksum (file: File) =
+    let (Checksum checksum) = file.Checksum
+    let (RelativePath fileName) = getFileName file
+    RelativePath (getChecksumFileName checksum fileName)
+    
+let getChecksumFileName (fileChecksum: Checksum) (fileName: RelativePath) = 
+    let (Checksum checksum) = fileChecksum
+    let (RelativePath name) = fileName
+    RelativePath (getChecksumFileName checksum name)
+
+let getFileChecksumDirFullPath (fileChecksum: Checksum, destDirFullPath: FullPath) =
+    let fileChecksumDir = getChecksumDirFromChecksum fileChecksum
+    let fileChecksumDirFullPath = getFullPath(destDirFullPath, fileChecksumDir)
+    fileChecksumDirFullPath
+
+let getAllFilesInDirectory (fullPath: FullPath) =
+    try
+         let (FullPath path) = fullPath
+         getAllFilesInDirectory path
+         |> Array.Parallel.map (
+             fun fileInfo ->
+                 RelativePath fileInfo.Name
+            )
+    with
+    | exn ->
+        let errorMsg = $"getAllFilesInDirectory with path {fullPath} have error: {exn}"
+        let error = Error errorMsg
+        logResult error |> ignore
+        failwith errorMsg
+
+let initOutputFileNodes (files: RelativePath []) (outputDestFullDir: FullPath) (inputConfigChecksum: Checksum) = 
+  let fileNodes = 
+    Array.Parallel.map (fun (file: RelativePath) ->
+      let (RelativePath fileName) = file
+      let (Checksum checksum) = inputConfigChecksum
+      let name, format = getFileNameAndFormat fileName
+      let nameWithChecksum = Util.getChecksumFileName checksum name
+      let (FullPath dir) = outputDestFullDir
+      let result = File {
+          Path = Path dir
+          Name = Name nameWithChecksum
+          Format = Format format
+          Checksum = Checksum checksum
+      }
+      result
+    ) files
+    |> List.ofArray
+  fileNodes
+  
+let pickIOInput (nodes: Node list) = 
+  List.pick (
+      function 
+      | IOInput i -> Some i
+      | _ -> None
+  ) nodes
+
+let pickFVCOMInput (nodes: Node list) = 
+  List.pick (
+      function 
+      | FVCOMInput i -> Some i
+      | _ -> None
+  ) nodes
+  
+let pickFile (nodes: Node list) = 
+  List.pick (
+      function 
+      | File f -> Some f
+      | _ -> None
+  ) nodes
+  
+let chooseFiles (nodes: Node list) = 
+  List.choose (
+      function 
+      | File file -> Some file
+      | _ -> None
+  ) nodes
+

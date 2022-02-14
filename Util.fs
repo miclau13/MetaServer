@@ -46,10 +46,18 @@ let getChecksumFileName (checksum: string) (fileName: string) =
 let getChecksumDirFromChecksum (checksum: string) = 
     let directoryLevel1 = checksum.[0..1]
     directoryLevel1
+   
+let getFileNameAndFormat (file: string) = 
+  let name = (file.Split [|'.'|]).[0]
+  let format = (file.Split [|'.'|]).[1]
+  (name, format)
+  
+// IO
+let checkIfFileExist (path: string) =
+    File.Exists path
+let checkIfDirectoryExist  (path: string) =
+    File.Exists path
 
-let getSimulationDirectoryPath (checksum: string, caseTitle: string, timestamp: string) = 
-    $"%s{checksum}-%s{caseTitle}-%s{timestamp}"
-    
 let getFullPath (basePath: string, relativePath: string) =
     match basePath with 
     | "." | "" | "./" -> 
@@ -57,3 +65,12 @@ let getFullPath (basePath: string, relativePath: string) =
         Path.Combine(currentDirectory, relativePath)
     | path -> 
         Path.Combine(path, relativePath)
+
+let getChecksumFromFile (path: string) =
+    let content = File.ReadAllBytes(path)
+    let result = content |> SHA1.Create().ComputeHash |> Array.fold (fun acc b -> acc + b.ToString("X2")) ""
+    result
+
+let getAllFilesInDirectory (path: string) =
+    let dir = DirectoryInfo(path)
+    dir.GetFiles()

@@ -1,14 +1,19 @@
 // Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
 
-open System
-open System.IO
 open Argu
+open Domain
 open FileIO
+open FileIO.CalculationDirectory
+open FileIO.CommitFile
+open FileIO.InputFile
+open FileIO.OutputFile
+open FVCOMInput
 open FVCOM.CommitTree
 open FVCOM.InputConfig
 open Input
 open Neo4jDb
 open Parser
+open System
 open Util
 
 exception ParserEx of string
@@ -95,124 +100,125 @@ let runInit (runArgs: ParseResults<InitArgs>) =
         // Get the config
         let configArgs = runArgs.GetResult(Config)
         try
-            // Get the base path 
-            let basePathArgs = runArgs.GetResult(BasePath, Some ".")
-            let basePath = defaultArg basePathArgs "."
-            // Get the input source directory if any
-            let inputSourceDirectoryArgs = runArgs.GetResult(InputSourceDirectory, Some "input")
-            let inputSourceDirectory = defaultArg inputSourceDirectoryArgs "input"
-            // Get the output source directory if any
-            let outputSourceDirectoryArgs = runArgs.GetResult(OutputSourceDirectory, Some "output")
-            let outputSourceDirectory = defaultArg outputSourceDirectoryArgs "output"
-            // Get the output directory if any
-            let targetDirectoryArgs = runArgs.GetResult(TargetDirectory, Some "data")
-            let targetDirectory = defaultArg targetDirectoryArgs "data"
-
-            let outputSourceFullPath = FileIO.getFullPath { BasePath = basePath ; RelativePath = outputSourceDirectory }
-            let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
-
-            // Start dealing with input
-            // Get the content from the config file
-            let configContent = IO.File.ReadAllText configArgs
-            // Run the parser on the config file
-            let configContentResult = parseContent FVCOM configContent
-
-            match configContentResult with
-            | Ok r ->
-                let resultInDomain = r |> parserResultToDomain
-
-                // Choose the items that have defined in the domain
-                // And unwrap the value from the result type
-                // Then convert to list
-                let nodes = 
-                    resultInDomain 
-                    |> Array.choose (function | Ok v -> Some v | _ -> None)
-                    |> Array.toList
-
-                // First, parse the input config file to get the directory of input
-                let ioInput = pickIOInput nodes
-                let inputDirectory = getIOInputDirectory ioInput
-                // Next, get the input files 
-                let inputFilesWithType = getExistingInputFiles inputDirectory nodes
-                // Start dealing with input files
-                let inputFileNodes = inputFilesWithType |> List.map (fun item -> item.Node)
-                let inputFiles = inputFileNodes |> chooseFiles
-                // Side effect [input files]: copy input files in FS
-                inputFiles
-                |> filterOutExistedFiles targetFullPath 
-                |> copyInputFiles (basePath, inputSourceDirectory, targetDirectory)
-                // End of dealing with input
-
-                // Start dealing with converting input config file
-                let convertedConfigText = inputFiles |> getConvertedConfigText inputDirectory configContent ioInput
-                let inputConfigChecksum = getChecksum convertedConfigText
-                let inputConfigFileType = getInputConfigFileType ()
-                // Side effect [input config file]: Create the input config file in FS
-                createFile(convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) targetFullPath
-                // Done with input config file
-
-                // Start dealing with tree file
-                // Side effect [tree file]: create the tree file in FS
-                createTreeFile inputConfigChecksum inputFiles targetFullPath
-                // Done with tree file
-
-                // Start dealing with output
-                // Get the target path by tree checksum
-                let targetOutputFullPath = FileIO.getFullPath targetFullPath
-                let targetOutputWithChecksumFullPath = getTargetOutputWithChecksumFullPath targetFullPath inputConfigChecksum
-                // Side effect: copy output data to the target path
-                directoryCopy outputSourceFullPath targetOutputWithChecksumFullPath inputConfigChecksum false
-                
-                // Get the source output data path 
-                let outputFileInfos = getAllFilesInDirectory outputSourceFullPath
-                let outputFileNodes = initOutputFileNodes outputFileInfos targetOutputWithChecksumFullPath inputConfigChecksum
-                let outputFiles = outputFileNodes |> chooseFiles
-                // Side effect [tree file]: append the tree file with the output files in FS
-                updateTreeRelatedFiles inputConfigChecksum targetFullPath outputFiles 
-                // End of dealing with output
-                
-                // Start creating directory for the calculation
-
-                // Get the title from FVCOMInput
-                let FVCOMInputNode = nodes |> pickFVCOMInput
-                let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
-                
-                let inputConfigFileNode = getInputConfigFileNode configArgs inputConfigChecksum inputConfigFileType targetFullPath
-                let simulationInputFiles = inputConfigFileNode::inputFileNodes |> chooseFiles
-                
-                // Side effect [simulation folder]: Create the simulation folder in FS
-                createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFiles, targetOutputFullPath)
-                // End of creating directory for the calculation
-                
-                // All side effects for DB:
-                // Side Effect: Delete All Previous Nodes if specified in DB
-                let shouldCleanAll = args.Contains(CleanAll)
-                if shouldCleanAll then
-                    deleteAllNodes()
-                
-                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
-                let treeFileNode = getTreeFileNode inputConfigChecksum targetFullPath
-
-                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFileNodes@outputFileNodes
-                // Side effect [all]: Create all the nodes in DB
-                createMultipleNodesIfNotExist allNodes
-                
-                let inputRelationshipInfos = getInputRelationshipInfos simulationNode inputFilesWithType
-                let inputConfigFileRelationshipInfo = getInputConfigFileRelationshipInfo simulationNode inputConfigFileNode
-                let treeFileRelationshipInfo = getTreeFileRelationshipInfo simulationNode treeFileNode
-                let outputRelationshipInfos: RelationShipInfo list = 
-                    List.map (
-                        fun file -> 
-                            { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
-                    ) outputFileNodes
-                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
-                // Side effect [all]: Relate all the nodes with simulation in DB
-                relateMultipleNodes relationshipList
-               
-                Ok ()
-            | Error e -> 
-                let errorMessage = $"Input parsing failed: %A{e}"
-                raise (ParserEx errorMessage)
+//            // Get the base path 
+//            let basePathArgs = runArgs.GetResult(BasePath, Some ".")
+//            let basePath = defaultArg basePathArgs "."
+//            // Get the input source directory if any
+//            let inputSourceDirectoryArgs = runArgs.GetResult(InputSourceDirectory, Some "input")
+//            let inputSourceDirectory = defaultArg inputSourceDirectoryArgs "input"
+//            // Get the output source directory if any
+//            let outputSourceDirectoryArgs = runArgs.GetResult(OutputSourceDirectory, Some "output")
+//            let outputSourceDirectory = defaultArg outputSourceDirectoryArgs "output"
+//            // Get the output directory if any
+//            let targetDirectoryArgs = runArgs.GetResult(TargetDirectory, Some "data")
+//            let targetDirectory = defaultArg targetDirectoryArgs "data"
+//
+//            let outputSourceFullPath = FileIO.getFullPath { BasePath = basePath ; RelativePath = outputSourceDirectory }
+//            let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
+//
+//            // Start dealing with input
+//            // Get the content from the config file
+//            let configContent = IO.File.ReadAllText configArgs
+//            // Run the parser on the config file
+//            let configContentResult = parseContent FVCOM configContent
+//
+//            match configContentResult with
+//            | Ok r ->
+//                let resultInDomain = r |> parserResultToDomain
+//
+//                // Choose the items that have defined in the domain
+//                // And unwrap the value from the result type
+//                // Then convert to list
+//                let nodes = 
+//                    resultInDomain 
+//                    |> Array.choose (function | Ok v -> Some v | _ -> None)
+//                    |> Array.toList
+//
+//                // First, parse the input config file to get the directory of input
+//                let ioInput = pickIOInput nodes
+//                let inputDirectory = getIOInputDirectory ioInput
+//                // Next, get the input files 
+//                let inputFilesWithType = getExistingInputFiles inputDirectory nodes
+//                // Start dealing with input files
+//                let inputFileNodes = inputFilesWithType |> List.map (fun item -> item.Node)
+//                let inputFiles = inputFileNodes |> chooseFiles
+//                // Side effect [input files]: copy input files in FS
+//                inputFiles
+//                |> filterOutExistedFiles targetFullPath 
+//                |> copyInputFiles (basePath, inputSourceDirectory, targetDirectory)
+//                // End of dealing with input
+//
+//                // Start dealing with converting input config file
+//                let convertedConfigText = inputFiles |> getConvertedConfigText inputDirectory configContent ioInput
+//                let inputConfigChecksum = getChecksum convertedConfigText
+//                let inputConfigFileType = getInputConfigFileType ()
+//                // Side effect [input config file]: Create the input config file in FS
+//                createFile(convertedConfigText, configArgs, inputConfigFileType, inputConfigChecksum) targetFullPath
+//                // Done with input config file
+//
+//                // Start dealing with tree file
+//                // Side effect [tree file]: create the tree file in FS
+//                createTreeFile inputConfigChecksum inputFiles targetFullPath
+//                // Done with tree file
+//
+//                // Start dealing with output
+//                // Get the target path by tree checksum
+//                let targetOutputFullPath = FileIO.getFullPath targetFullPath
+//                let targetOutputWithChecksumFullPath = getTargetOutputWithChecksumFullPath targetFullPath inputConfigChecksum
+//                // Side effect: copy output data to the target path
+//                directoryCopy outputSourceFullPath targetOutputWithChecksumFullPath inputConfigChecksum false
+//                
+//                // Get the source output data path 
+//                let outputFileInfos = getAllFilesInDirectory outputSourceFullPath
+//                let outputFileNodes = initOutputFileNodes outputFileInfos targetOutputWithChecksumFullPath inputConfigChecksum
+//                let outputFiles = outputFileNodes |> chooseFiles
+//                // Side effect [tree file]: append the tree file with the output files in FS
+//                updateTreeRelatedFiles inputConfigChecksum targetFullPath outputFiles 
+//                // End of dealing with output
+//                
+//                // Start creating directory for the calculation
+//
+//                // Get the title from FVCOMInput
+//                let FVCOMInputNode = nodes |> pickFVCOMInput
+//                let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
+//                
+//                let inputConfigFileNode = getInputConfigFileNode configArgs inputConfigChecksum inputConfigFileType targetFullPath
+//                let simulationInputFiles = inputConfigFileNode::inputFileNodes |> chooseFiles
+//                
+//                // Side effect [simulation folder]: Create the simulation folder in FS
+//                createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFiles, targetOutputFullPath)
+//                // End of creating directory for the calculation
+//                
+//                // All side effects for DB:
+//                // Side Effect: Delete All Previous Nodes if specified in DB
+//                let shouldCleanAll = args.Contains(CleanAll)
+//                if shouldCleanAll then
+//                    deleteAllNodes()
+//                
+//                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
+//                let treeFileNode = getTreeFileNode inputConfigChecksum targetFullPath
+//
+//                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFileNodes@outputFileNodes
+//                // Side effect [all]: Create all the nodes in DB
+//                createMultipleNodesIfNotExist allNodes
+//                
+//                let inputRelationshipInfos = getInputRelationshipInfos simulationNode inputFilesWithType
+//                let inputConfigFileRelationshipInfo = getInputConfigFileRelationshipInfo simulationNode inputConfigFileNode
+//                let treeFileRelationshipInfo = getTreeFileRelationshipInfo simulationNode treeFileNode
+//                let outputRelationshipInfos: RelationShipInfo list = 
+//                    List.map (
+//                        fun file -> 
+//                            { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
+//                    ) outputFileNodes
+//                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
+//                // Side effect [all]: Relate all the nodes with simulation in DB
+//                relateMultipleNodes relationshipList
+//               
+//                Ok ()
+//            | Error e -> 
+//                let errorMessage = $"Input parsing failed: %A{e}"
+//                raise (ParserEx errorMessage)
+             Ok ()
         with 
             ex ->
                 match ex with
@@ -310,22 +316,21 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
         try
             // Get the base path 
             let basePathArgs = runArgs.GetResult(TBasePath, Some ".")
-            let basePath = defaultArg basePathArgs "."
+            let basePath = FullPath (defaultArg basePathArgs ".")
             // Get the input source directory if any
             let inputSourceDirectoryArgs = runArgs.GetResult(TInputSourceDirectory, Some "input")
-            let inputSourceDirectory = defaultArg inputSourceDirectoryArgs "input"
-            let inputSourceDirFullPath = getFullPath(basePath, inputSourceDirectory)
+            let inputSourceDirectory = RelativePath (defaultArg inputSourceDirectoryArgs "input")
+            let inputSourceDirFullPath = Domain.getFullPath(basePath, inputSourceDirectory)
             // Get the output source directory if any
             let outputSourceDirectoryArgs = runArgs.GetResult(TOutputSourceDirectory, Some "output")
-            let outputSourceDirectory = defaultArg outputSourceDirectoryArgs "output"
-            let outputSourceDirectoryFullPath = getFullPath(basePath, outputSourceDirectory)
+            let outputSourceDirectory = RelativePath (defaultArg outputSourceDirectoryArgs "output")
+            let outputSourceDirectoryFullPath = Domain.getFullPath(basePath, outputSourceDirectory)
             // Get the output directory if any
             let targetDirectoryArgs = runArgs.GetResult(TTargetDirectory, Some "test")
-            let targetDirectory = defaultArg targetDirectoryArgs "test"
-            let targetDirectoryFullPath = getFullPath(basePath, targetDirectory)
+            let targetDirectory = RelativePath (defaultArg targetDirectoryArgs "test")
+            let targetDirectoryFullPath = Domain.getFullPath(basePath, targetDirectory)
 
-//            let outputSourceFullPath = getFullPath { BasePath = basePath ; RelativePath = outputSourceDirectory }
-            let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
+//            let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
 
             // Start dealing with input
             // Get the content from the config file
@@ -336,7 +341,6 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
             match configContentResult with
             | Ok r ->
                 let resultInDomain = r |> parserResultToDomain
-
                 // Choose the items that have defined in the domain
                 // And unwrap the value from the result type
                 // Then convert to list
@@ -347,121 +351,108 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
 
                 // First, parse the input config file to get the directory of input
                 let ioInput = pickIOInput nodes
-                let inputDirectory = getIOInputDirectory ioInput
+                let inputDirectory = Domain.getIOInputDirectory ioInput
+                let inputDirFullPath = Domain.getFullPath(basePath, inputDirectory)
                 // Next, get the input files 
-                let inputFilesWithType = getExistingInputFiles inputDirectory nodes
+                let fileNodes = getExistingInputFiles inputDirFullPath nodes
                 // Start dealing with input files
-                let inputFileNodes = inputFilesWithType |> List.map (fun item -> item.Node)
+                let inputFileNodes = fileNodes |> Array.ofList |> Array.Parallel.map (fun item -> item.Node) |> Array.toList
                 let inputFiles = inputFileNodes |> chooseFiles
                 // Side effect [input files]:
                 // 1. Create target Dir to store the input files
                 // 2. copy input files in FS
-                Command.createTestDirectoryApi targetDirectory |> ignore
+                createDirectory targetDirectoryFullPath 
                 let stopWatch = System.Diagnostics.Stopwatch.StartNew()
-                inputFiles
-                |> filterOutExistedFiles targetFullPath
-                |> List.toArray
-                |> Array.Parallel.iter (
-                    fun (inputFile: Domain.File) ->
-                        let fileName = Domain.getFileName inputFile
-                        let (Domain.Checksum fileChecksum) = inputFile.Checksum
-                        let fileChecksumDir = getChecksumDirFromChecksum fileChecksum
-                        let fileChecksumDirFullPath = getFullPath(targetDirectoryFullPath, fileChecksumDir)
-                        Command.createTestDirectoryApi fileChecksumDirFullPath |> ignore
-                        
-                        let sourceInputFilePath = getFullPath(inputSourceDirFullPath, fileName)
-                        let destInputFileName = getChecksumFileName fileChecksum fileName
-                        let destInputFilePath = getFullPath(fileChecksumDirFullPath, destInputFileName)
-                        Command.copyTestFileApi (sourceInputFilePath, destInputFilePath) |> ignore
-//                        let sourceFilePath = inputSourceDirFullPath
-                    )
+                let createFilesInput = {
+                    InputFiles = inputFiles
+                    SourceDirPath = inputSourceDirFullPath
+                    TargetDirPath = targetDirectoryFullPath
+                }
+                createInputFiles createFilesInput
                 stopWatch.Stop()
                 printfn $"Copy input files Time: %f{stopWatch.Elapsed.TotalMilliseconds}"
                 // End of dealing with input
-//
-//                // Start dealing with converting input config file
+                
+                // Start dealing with converting input config file
                 let convertedConfigText = inputFiles |> getConvertedConfigText inputDirectory configContent ioInput
-                let inputConfigChecksum = getChecksum convertedConfigText
+                let inputConfigChecksum = Domain.Checksum (getChecksum convertedConfigText)
                 // Side effect [input config file]: Create the input config file in FS
-                // TODO1 put these function to other file
-                let getFileChecksumDirFullPath (fileChecksum: string, destDirFullPath: string) =
-                    let fileChecksumDir = getChecksumDirFromChecksum fileChecksum
-                    let fileChecksumDirFullPath = getFullPath(destDirFullPath, fileChecksumDir)
-                    fileChecksumDirFullPath
-
-                let createFile (fileName: string, fileChecksum: string, fileContent: string, destDirFullPath: string) =
-                    let fileChecksumDirFullPath = getFileChecksumDirFullPath (fileChecksum, destDirFullPath)
-                    Command.createTestDirectoryApi fileChecksumDirFullPath |> ignore
-                    
-                    let destInputFileName = getChecksumFileName fileChecksum fileName
-                    let destInputFilePath = getFullPath(fileChecksumDirFullPath, destInputFileName)
-                    Command.createTestFileApi (destInputFilePath, fileContent) |> ignore
                 let stopWatch = System.Diagnostics.Stopwatch.StartNew()
-                createFile(configArgs, inputConfigChecksum, convertedConfigText, targetDirectoryFullPath)
+                let inputConfigFile = RelativePath configArgs
+                createFile(inputConfigFile, inputConfigChecksum, convertedConfigText, targetDirectoryFullPath)
                 stopWatch.Stop()
                 printfn $"Create input config files Time: %f{stopWatch.Elapsed.TotalMilliseconds}"
                 // Done with input config file
-//
-                // Start dealing with tree file
-                // Side effect [tree file]: create the tree file in FS
-                let checksumStr = getTreeRelatedFilesStr inputFiles
-                let currentTimeStamp = DateTime.UtcNow.ToString()
-                let currentUser = Environment.UserName
-                let commit = getChecksumFileName inputConfigChecksum "tree"
-                let treeContent = 
-                    $"commit %s{commit}\nAuthor: %s{currentUser}\nDate: %s{currentTimeStamp}\nRelated files: \n%s{checksumStr}"
-                let { Name = treeFileName; Type = treeFileType } = getTreeFileInfo ()
+                
+                // Start dealing with commit file
+                // Side effect [commit file]: create the commit file in FS
+                let createCommitFileInput: CreateCommitFileInput = {
+                    Checksum = inputConfigChecksum
+                    FileTargetPath = targetDirectoryFullPath
+                    InputFiles = inputFiles
+                }
                 let stopWatch = System.Diagnostics.Stopwatch.StartNew()
-                createFile(treeFileName, inputConfigChecksum, treeContent, targetDirectoryFullPath)
+                createCommitFile(createCommitFileInput)
                 stopWatch.Stop()
                 printfn $"Create tree files Time: %f{stopWatch.Elapsed.TotalMilliseconds}"
-                // Done with tree file
+                // Done with commit file
 
                 // Start dealing with output
                 // Side effect: copy output data to the target path
-                let outputDestChecksumDir = getChecksumDirFromChecksum inputConfigChecksum
-                let outputDestFullDir = getFullPath(targetDirectoryFullPath, outputDestChecksumDir)
+                let outputDestChecksumDir = Domain.getChecksumDirFromChecksum inputConfigChecksum
+                let outputDestFullDir = Domain.getFullPath(targetDirectoryFullPath, outputDestChecksumDir)
+                let copyOutputDirInput: CopyOutputDirInput = {
+                    Checksum = inputConfigChecksum
+                    FilesSourcePath = outputSourceDirectoryFullPath
+                    FilesTargetPath = outputDestFullDir
+                }
                 let stopWatch = System.Diagnostics.Stopwatch.StartNew()
-                Command.copyTestDirectoryApi (outputSourceDirectoryFullPath, outputDestFullDir, Some(inputConfigChecksum)) |> ignore
+                copyOutputDir copyOutputDirInput
                 stopWatch.Stop()
                 printfn $"Copy Directory Time: %f{stopWatch.Elapsed.TotalMilliseconds}" 
+                
                 // Get the source output data path 
-                let outputFileInfos = getAllFilesInDirectory outputSourceDirectoryFullPath
-                let outputFileNodes = initOutputFileNodes outputFileInfos outputDestFullDir inputConfigChecksum
+                let outputFilePaths = Domain.getAllFilesInDirectory outputSourceDirectoryFullPath
+                let outputFileNodes = initOutputFileNodes outputFilePaths outputDestFullDir inputConfigChecksum
                 let outputFiles = outputFileNodes |> chooseFiles
                 // Side effect [tree file]: append the tree file with the output files in FS
-                let outputChecksumStr = getTreeRelatedFilesStr outputFiles
-                let treeChecksumDirFullPath = getFileChecksumDirFullPath (inputConfigChecksum, targetDirectoryFullPath)
-                let treeDestFileName = getChecksumFileName inputConfigChecksum treeFileName
-                let treeDestFileFullPath = getFullPath(treeChecksumDirFullPath, treeDestFileName)
-//                updateTreeRelatedFiles inputConfigChecksum targetFullPath outputFiles
+                let updateCommitFileInput: UpdateCommitFileInput = {
+                    Checksum = inputConfigChecksum
+                    FileTargetPath = targetDirectoryFullPath
+                    OutputFiles = outputFiles
+                }
                 let stopWatch = System.Diagnostics.Stopwatch.StartNew()
-                Command.updateTestFileApi (treeDestFileFullPath, outputChecksumStr) |> ignore
+                updateCommitFile updateCommitFileInput
                 stopWatch.Stop()
                 printfn $"Update Tree file Time: %f{stopWatch.Elapsed.TotalMilliseconds}" 
                 // End of dealing with output
+                
+                // Start creating directory for the calculation
+                // Get the title from FVCOMInput
+                let FVCOMInputNode = nodes |> pickFVCOMInput
+                let (CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
+                let inputConfigFileNode = getInputConfigFileNode inputConfigFile inputConfigChecksum targetDirectoryFullPath
+                let simulationInputFiles = inputConfigFileNode::inputFileNodes |> chooseFiles
+                // Side effect [simulation folder]: Create the simulation folder in FS
+                let createSimulationDirInput: CreateSimulationDirInput = {
+                    BasePath = basePath
+                    CaseTitle = caseTitle
+                    Checksum = inputConfigChecksum
+                    FilesTargetPath = targetDirectoryFullPath
+                    InputFiles = simulationInputFiles
+                    OutputFiles = outputFiles
+                }
+                createSimulationDir createSimulationDirInput
+                // End of creating directory for the calculation
 //                
-//                // Start creating directory for the calculation
-//
-//                // Get the title from FVCOMInput
-//                let FVCOMInputNode = nodes |> pickFVCOMInput
-//                let (FVCOMInput.CaseTitle caseTitle) = FVCOMInputNode.CaseTitle
-//                
-//                let inputConfigFileNode = getInputConfigFileNode configArgs inputConfigChecksum inputConfigFileType targetFullPath
-//                let simulationInputFiles = inputConfigFileNode::inputFileNodes |> chooseFiles
-//                
-//                // Side effect [simulation folder]: Create the simulation folder in FS
-//                createSimulationFolder inputConfigChecksum caseTitle basePath (simulationInputFiles, targetDirectory) (outputFiles, targetOutputFullPath)
-//                // End of creating directory for the calculation
-//                
-//                // All side effects for DB:
-//                // Side Effect: Delete All Previous Nodes if specified in DB
+                // All side effects for DB:
+                // Side Effect: Delete All Previous Nodes if specified in DB
 //                let shouldCleanAll = args.Contains(CleanAll)
 //                if shouldCleanAll then
 //                    deleteAllNodes()
-//                
-//                let simulationNode = Domain.Simulation { Checksum = Domain.Checksum inputConfigChecksum }
-//                let treeFileNode = getTreeFileNode inputConfigChecksum targetFullPath
+                
+//                let simulationNode = Simulation { Checksum = inputConfigChecksum }
+//                let treeFileNode = getTreeFileNode inputConfigChecksum targetDirectoryFullPath
 //
 //                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFileNodes@outputFileNodes
 //                // Side effect [all]: Create all the nodes in DB
@@ -478,7 +469,7 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
 //                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
 //                // Side effect [all]: Relate all the nodes with simulation in DB
 //                relateMultipleNodes relationshipList
-//               
+               
                 Ok ()
             | Error e -> 
                 let errorMessage = $"Input parsing failed: %A{e}"

@@ -1,10 +1,7 @@
 module Input
 
-open System.IO
-
-open Domain
-open FileIO
-open IOInput
+//open Domain
+open Logger
 open Util
 type RawInput =
     { RawString : string }
@@ -13,42 +10,10 @@ type InputConfigReplacement = {
   Input: string
   Replacement: string
 }
-type InputFile = {
-  Node: Node
-  Type: string
-}
-
-let getFileNameAndFormat (f: string) = 
-  let name = (f.Split [|'.'|]).[0]
-  let format = (f.Split [|'.'|]).[1]
-  (name, format)
-
-let getInputFileResult (fileName: string) (inputDirectory: string) (fileType: string) = 
-  match fileName with
-  | RegexGroup "\." 0 _ ->
-    let name, format = getFileNameAndFormat fileName
-    let fileLocation = Path.Combine(inputDirectory, fileName)
-    if (checkIfFileExist fileLocation) then
-      let checksum = 
-        // If input is in nc format, check if it has checksum in its file name
-        // If yes then use the checksum directly, otherwise generate checksum 
-        match name with 
-        | RegexGroup FileWithChecksumRegex 0 name  -> 
-          name
-        | _ -> getChecksumFromFile fileLocation
-      let file = File {
-          Path = Path inputDirectory
-          Name = Name name
-          Format = Format format
-          Checksum = Checksum checksum
-      }
-      Some { Node = file ; Type = fileType }
-    else 
-      let err = $"File (%s{fileName}) does not exist at the path (%s{inputDirectory})."
-      failwith err
-  | _ ->  
-      printfn $"Input File (name: %s{fileName}, configType: %s{fileType}) is not created "
-      None
+//type InputFile = {
+//  Node: Node
+//  Type: string
+//}
 
 let getFilePropertyRegex (property: string) = 
   $"(.*?%s{property})(\s*=\s*'*)([^',]*)('*\s*)(,?)"
@@ -62,23 +27,6 @@ let getProperty (str: string) (property: string) =
       str
     | _ -> failwith $"Could not capture the string value (%s{str}) with property (%s{property}) by getFilePropertyRegex"
 
-// For output files 
-let initOutputFileNodes (files: FileInfo []) (dir: string) (inputConfigChecksum: string) = 
-  let fileNodes = 
-    Array.Parallel.map (fun (file: FileInfo) -> 
-      let fileName = file.Name
-      let name, format = getFileNameAndFormat fileName
-      let checksum = getChecksumFileName inputConfigChecksum name
-      let result = File {
-          Path = Path dir
-          Name = Name checksum
-          Format = Format format
-          Checksum = Checksum checksum
-      }
-      result
-    ) files
-    |> List.ofArray
-  fileNodes
 module RawInput = 
     let toDomain (str: string) =
       let result = { RawString = str }
@@ -754,59 +702,13 @@ let getNodeResultFromParserStr (parserStr: string) =
       |> getResultArrayFromNodeDto
     
     Array.reduce Array.append [|airPressureInputResult; heatingInputResult; precipitationInputResult; windInputResult; waveInputResult |]
-  | _ -> [|Error "No suitable toDto"|] 
+  | str ->
+    let errorMsg = $"({str}) does not have suitable toDto"
+    logResult (Error errorMsg) |> ignore
+    [| Error errorMsg |] 
   
 let parserResultToDomain (result: list<string>) = 
     result 
     |> Array.ofList
     |> Array.Parallel.map getNodeResultFromParserStr
     |> Array.reduce Array.append
-
-let pickIOInput (nodes: Node list) = 
-  List.pick (
-      function 
-      | IOInput i -> Some i
-      | _ -> None
-  ) nodes
-
-let pickFVCOMInput (nodes: Node list) = 
-  List.pick (
-      function 
-      | FVCOMInput i -> Some i
-      | _ -> None
-  ) nodes
-  
-let pickFile (nodes: Node list) = 
-  List.pick (
-      function 
-      | File f -> Some f
-      | _ -> None
-  ) nodes
-  
-let chooseFiles (nodes: Node list) = 
-  List.choose (
-      function 
-      | File file -> Some file
-      | _ -> None
-  ) nodes
-
-let getIOInputDirectory (input: IOInput) = 
-    let (InputDirectory dir) = input.InputDirectory 
-    dir
-
-let getFile (inputDirectory: string) (node: Node) = 
-    match node with 
-    | Simulation _ | File _ | IOInput _ | FVCOMInput _-> None
-    | ConfigFileInput n -> 
-        let (InputFile file) = n.File
-        let (FileType configType) = n.ConfigType
-        getInputFileResult file inputDirectory configType
-
-let getExistingInputFiles (inputDirectory: string) (inputs: Node list) =  
-      let files = 
-        inputs
-        |> Array.ofList
-        |> Array.Parallel.map (getFile inputDirectory) 
-        |> Array.toList
-        |> List.choose id
-      files

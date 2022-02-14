@@ -39,23 +39,27 @@ let interpret program =
 //  |> interpret
 //  |> Async.RunSynchronously
 
-let copyTestDirectoryApi copyDirectoryInput =
-  FileIOInstruction.Shell.copyDirectory copyDirectoryInput
+let copyTestDirectoryApi copyTestDirectoryApiInput =
+  FileIOInstruction.Shell.copyDirectory copyTestDirectoryApiInput
   |> interpret
   |> Async.RunSynchronously
-let copyTestFileApi (sourceFilePath, destFilePath) =
-  FileIOInstruction.Shell.copyFile (sourceFilePath, destFilePath)
+let copyTestFileApi copyTestFileApiInput =
+  FileIOInstruction.Shell.copyFile copyTestFileApiInput
   |> interpret
   |> Async.RunSynchronously
 let createTestDirectoryApi directoryPath =
   FileIOInstruction.Shell.createDirectoryOnly directoryPath
   |> interpret
   |> Async.RunSynchronously
-let createTestFileApi (destFilePath, content) =
-  FileIOInstruction.Shell.createFileOnly (destFilePath, content)
+let createTestFileApi createTestFileApiInput =
+  FileIOInstruction.Shell.createFileOnly createTestFileApiInput
   |> interpret
   |> Async.RunSynchronously
-let updateTestFileApi (destFilePath, content) =
-  FileIOInstruction.Shell.updateFileOnly (destFilePath, content)
+let createTestSymbolicLinkApi createTestSymbolicLinkApiInput =
+  FileIOInstruction.Shell.createSymbolicLink createTestSymbolicLinkApiInput
+  |> interpret
+  |> Async.RunSynchronously
+let updateTestFileApi updateTestFileApiInput =
+  FileIOInstruction.Shell.updateFileOnly updateTestFileApiInput
   |> interpret
   |> Async.RunSynchronously
