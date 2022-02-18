@@ -4,6 +4,15 @@ open Domain
 open System
 open FVCOMInput
 open IOInput
+open Neo4jClient
+open Util
+
+type NodeLabel = string
+type NodeDTODataStr = string
+type NodeDTOData = NodeDTODataStr * seq<NodeLabel>
+type NodeDTOReturnData = seq<NodeDTOData>
+type PathDTOData = seq<ApiModels.Cypher.PathsResultBolt>
+type RelationshipDTOData = seq<string>
 
 type Dto<'T> = {
   data: 'T
@@ -40,7 +49,7 @@ type IOInputDto = {
 }
 
 type HasInputDTO = {
-  Type: string
+  Type: FileType
 }
 
 type FileLocationIsDTO = {
@@ -57,6 +66,7 @@ type RelationshipDto =
 type DtoError =
     | ValidationError of string
     | DeserializationException of exn
+    | InvalidDomainLogic of string
 
 type NodeDto = 
   | FileDto of FileDto
@@ -69,13 +79,6 @@ type NodeOutput = {
   Labels: string []
   Nodes: Result<Node, DtoError> option []
 }
-
-type ResultBuilder() =
-    member this.Return x = Ok x
-    member this.Zero() = Ok ()
-    member this.Bind(xResult,f) = Result.bind f xResult
-
-let result = ResultBuilder()
 
 let toDto (data: 'T) = 
   { data = data }
@@ -315,25 +318,31 @@ module NodeDto =
   //   | D name ->
   //     let ddata = name |> nameDtoFromDomain
   //     {Tag="D"; BData=nullBData; CData=nullCData; DData=ddata}
-  let toDomain (dto: string * seq<string>) =
+  let toDomain (dto: NodeDTOData) =
     let jsonString, labels = dto
     let labelArr = Seq.toArray labels
-    printfn $"toDomain labelArr:%A{labelArr}"
-    let result: NodeOutput = 
-      {
-          Labels = labelArr
-          Nodes = 
-            Array.Parallel.map (
-              function 
-              | "File" -> 
-                  jsonString 
-                  |> FileDto.jsonToDomain
-                  |> Some
-              | "Simulation" -> 
-                  jsonString 
-                  |> SimulationDto.jsonToDomain
-                  |> Some
-              | _ -> None
-            ) labelArr
-      }
+    // TBC
+    let result =
+      // TBC Should have only one label
+      match labelArr.Length with
+      | 0 -> Error (InvalidDomainLogic $"Should not have zero label, return with labels{labelArr}")
+      | 1 ->
+        // TBC Use the first label 
+        let label = labelArr.[0]
+        let nodeResult =
+          match label with
+          | "File" -> 
+              jsonString 
+              |> FileDto.jsonToDomain
+          | "Simulation" -> 
+              jsonString 
+              |> SimulationDto.jsonToDomain
+          | l -> Error (InvalidDomainLogic $"Label ({l}) does not have valid toDomain")
+        nodeResult
+      | _ -> Error (InvalidDomainLogic $"Should not have more than one label, return with labels{labelArr}")
     result
+
+  let nodeDTOsToDomain (nodeDTOs: NodeDTOReturnData) = 
+      nodeDTOs 
+      |> Seq.map toDomain 
+      |> List.ofSeq

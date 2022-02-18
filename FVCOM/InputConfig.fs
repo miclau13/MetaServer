@@ -3,7 +3,6 @@ module FVCOM.InputConfig
 open Domain
 open Input
 open IOInput
-open Neo4jDb
 open Util
 
 let getInputConfigFileType () = "Input Config"
@@ -55,18 +54,3 @@ let getInputConfigFileNode (fileName: RelativePath) (inputConfigChecksum: Checks
         |> Option.get
         |> (fun item -> item.Node)
     inputConfigFileNode
-//let getInputRelationshipInfos (simulationNode: Node) (inputFilesWithType: InputFile list) =
-//    let inputRelationshipInfos: RelationShipInfo list = 
-//        List.map (
-//            fun (item: Input.InputFile) -> 
-//                let inputFile = item.Node
-//                let relationship = item.Type
-//                let relationshipProps = Some (Dto.HasInputDTO { Type = relationship })
-//                { SourceNode = simulationNode ; TargetNode = inputFile ; Relationship = "HAS_INPUT" ; RelationshipProps = relationshipProps }
-//        ) inputFilesWithType
-//    inputRelationshipInfos
-//
-//let getInputConfigFileRelationshipInfo  (simulationNode: Node) (inputConfigFileNode: Node) = 
-//    let inputConfigFileRelationshipInfo: RelationShipInfo = 
-//        { SourceNode = simulationNode ; TargetNode = inputConfigFileNode ; Relationship = "HAS_INPUT_CONFIG" ; RelationshipProps = None }
-//    inputConfigFileRelationshipInfo    

@@ -6,11 +6,6 @@ open Util
 let getTreeFileName () = RelativePath "tree.txt"
 let getTreeFileType () = "Tree"
     
-//let getTreeFileRelationshipInfo (simulationNode: Node) (treeFileNode: Node) =
-//    let treeFileRelationshipInfo: RelationShipInfo = 
-//        { SourceNode = simulationNode ; TargetNode = treeFileNode ; Relationship = "HAS_TREE" ; RelationshipProps = None }
-//    treeFileRelationshipInfo
-    
 let getTreeRelatedFilesStr (files: File List) =
     let commitChecksums = files |> getChecksumListArrayFromFiles
     let checksumStr = getChecksumStrFromChecksumArray commitChecksums

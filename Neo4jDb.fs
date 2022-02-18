@@ -1,9 +1,9 @@
 module Neo4jDb
-open Neo4jClient
-open FSharp.Json
 
-open Dto
+open DbConfig
 open Domain
+open Dto
+open Neo4jClient
 
 [<CLIMutable>]
 type NodeAttributes = {
@@ -26,9 +26,7 @@ type Neo4jOutputData<'T> = {
     data: 'T
 }
 
-type Neo4jOutput<'T> = Neo4jOutputData<'T> * string * seq<string>
-
-let clientWithCypher = Db.getDbClient ()
+let clientWithCypher = getDbClient ()
 
 let getNodeLabel (node: Node) =
     let label =
@@ -40,20 +38,8 @@ let getNodeLabel (node: Node) =
         | Simulation _ -> nameof Simulation
     label
 
-// 10/11/2021
-let getDataInDomainFormat<'T> (node: string) =
-    Json.deserialize<'T> node
-
-// 9/11/2021
-let toListInDomainFormat (nodes: seq<string * seq<string>>) = 
-    nodes 
-    |> Seq.map (fun dto -> 
-        dto |> NodeDto.toDomain
-    ) 
-    |> List.ofSeq
-
 // 18/11/2021 & 19/11/2021
-let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cypher.PathsResultBolt>) = 
+let getPathResult (direction: PathDirection) (pathResultSeq: seq<Neo4jClient.ApiModels.Cypher.PathsResultBolt>) = 
     pathResultSeq
     |> Seq.map (fun pathResult ->
         let relationships = pathResult.Relationships
@@ -67,17 +53,16 @@ let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cyph
             let startNode = nodeIdToNodeMap.Item startNodeId
             let endNode = nodeIdToNodeMap.Item endNodeId
             match direction with
-            | "TO" -> 
+            | TO -> 
                 if acc = "" then
                     $"NodeId:%i{endNodeId}(%s{Seq.reduce (+) endNode.Labels}) <-----%s{relationshipType}----- NodeId:%i{startNodeId}(%s{Seq.reduce (+) startNode.Labels})"
                 else 
                     $"%s{acc} <-----%s{relationshipType}----- NodeId:%i{startNodeId}(%s{Seq.reduce (+) startNode.Labels})"
-            | "FROM" -> 
+            | FROM -> 
                 if acc = "" then
                     $"NodeId:%i{startNodeId}(%s{Seq.reduce (+) startNode.Labels}) -----%s{relationshipType}-----> NodeId:%i{endNodeId}(%s{Seq.reduce (+) endNode.Labels})"
                 else 
                     $"%s{acc} -----%s{relationshipType}-----> NodeId:%i{endNodeId}(%s{Seq.reduce (+) endNode.Labels})"
-            | _ -> ""
         ) "" relationships 
     ) 
     |> List.ofSeq
@@ -85,106 +70,13 @@ let getResult (direction: string) (pathResultSeq: seq<Neo4jClient.ApiModels.Cyph
 // 22/11/2021
 let getRelationshipAttributes (relationship: RelationshipDto) = 
     match relationship with
-        | HasInputDTO v -> $"{{ Type: '%s{v.Type}' }}"
+        | HasInputDTO v ->
+            let (FileType fileType) = v.Type
+            $"{{ Type: '%s{fileType}' }}"
         | FileLocationIsDTO v -> $"{{ BasicPath: '%s{v.BasicPath}' }}"
         | HasOutputDTO -> sprintf "{ }"
         | HasTreeDTO -> sprintf "{ }"
         | HasInputConfigDTO -> sprintf "{ }"
-
-let getRelationships (relationship: string, relationshipProperty: string option, relationshipPropertyValue: string option) =
-    let queryMatchTo = 
-        match relationshipProperty with 
-        | Some p -> 
-            match relationshipPropertyValue with 
-            | Some pv -> $"p = (node)<-[relationship:%s{relationship} {{%s{p}:'%s{pv}'}}]-(targetNode)"
-            | None -> $"p = (node)<-[relationship:%s{relationship}]-(targetNode)"
-        | None -> $"p = (node)<-[relationship:%s{relationship}]-(targetNode)"
-
-    clientWithCypher.Match(queryMatchTo)
-        .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
-        .ResultsAsync
-    |> Async.AwaitTask |> Async.RunSynchronously
-    |> ignore
-    let resultTo =
-        clientWithCypher.Match(queryMatchTo)
-            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
-            .ResultsAsync
-        |> Async.AwaitTask |> Async.RunSynchronously 
-        |> getResult "TO"
-    resultTo |> List.distinct
-
-let getRelatedNodesPath (relationship: string option, checksum: string, maxPathLength: string) =
-    let queryMatchTo = 
-        match relationship with
-        | Some r -> $"p = (node)<-[:%s{r}%s{maxPathLength}]-(targetNode)"
-        | None -> $"p = (node)<-[%s{maxPathLength}]-(targetNode)"
-    let resultTo =
-        clientWithCypher
-            .Match(queryMatchTo)
-            .Where(fun node -> node.Checksum = checksum)
-            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
-            .ResultsAsync
-        |> Async.AwaitTask |> Async.RunSynchronously 
-        |> getResult "TO"
-    let queryMatchFrom = 
-        match relationship with
-        | Some r -> $"p = (node)-[:%s{r}%s{maxPathLength}]->(targetNode)"
-        | None -> $"p = (node)-[%s{maxPathLength}]->(targetNode)"
-    let resultFrom =
-        clientWithCypher
-            .Match(queryMatchFrom)
-            .Where(fun node -> node.Checksum = checksum)
-            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
-            .ResultsAsync
-        |> Async.AwaitTask |> Async.RunSynchronously 
-        |> getResult "FROM"
-    resultTo @ resultFrom
-
-let getAllRelationship () =
-    let queryMatch = sprintf "(node)-[r]->(result)" 
-    let result =
-        clientWithCypher
-            .Match(queryMatch)
-            .ReturnDistinct(fun (r: Cypher.ICypherResultItem) -> r.Type())
-            .ResultsAsync
-    let nodes =
-        result |> Async.AwaitTask |> Async.RunSynchronously
-    nodes
-
-let getNodeByChecksum (checksum: string) =
-    let queryMatch = sprintf "(node)"
-    let result =
-        clientWithCypher
-            .Match(queryMatch)
-            .Where(fun node -> node.Checksum = checksum)
-            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
-            .ResultsAsync
-    let nodes =
-        result |> Async.AwaitTask |> Async.RunSynchronously
-        |> toListInDomainFormat
-    nodes
-
-let getNodesByLabel (label: string) =
-    let queryMatch = $"(node: %s{label})"
-    let result =
-        clientWithCypher
-            .Match(queryMatch)
-            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
-            .ResultsAsync
-    let nodes =
-        result |> Async.AwaitTask |> Async.RunSynchronously
-        |> toListInDomainFormat
-    nodes
-
-// 13/1/2022
-let getClientWithCreateRelationStr (sourceNodeName, targetNodeName, relationship, relationshipProps) (client: Cypher.ICypherFluentQuery)   =
-    let queryRelationshipStr = 
-        match relationshipProps with
-        | Some p -> 
-            let relationshipAttributes = getRelationshipAttributes(p)
-            $"(%s{sourceNodeName})-[:%s{relationship}%s{relationshipAttributes}]->(%s{targetNodeName})"
-        | None -> $"(%s{sourceNodeName})-[:%s{relationship}]->(%s{targetNodeName})"
-    client.Create(queryRelationshipStr)
 
 let getClientWithMergeStr (str: string) (client: Cypher.ICypherFluentQuery) =
     client.Merge(str)
@@ -213,17 +105,6 @@ let getNodeAttributes (node: Node) =
         | FVCOMInput input -> { Label = "FVCOMInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
         | IOInput input -> { Label = "IOInput"; Key = "ConfigType"; KeyValue = input.ConfigType |> InputType.value }
 
-let getAllNodes () =
-    let result =
-        clientWithCypher
-            .Match("(node)")
-            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
-            .ResultsAsync
-    let nodes =
-        result |> Async.AwaitTask |> Async.RunSynchronously
-        |> toListInDomainFormat
-    nodes
-
 let convertNodeToQueryStr (index: int) (node: Node) =
     let nodeAttributes = getNodeAttributes node
     let nodeLabel = nodeAttributes.Label
@@ -232,123 +113,6 @@ let convertNodeToQueryStr (index: int) (node: Node) =
     let mergeStr = $"(node%i{index}:%s{nodeLabel} {{%s{nodeKey}: $nodeKeyValue%i{index}}})"
     (mergeStr, index, node, nodeKeyValue)
 
-let getReducedMergeQueryStr (strList: string list) = 
-    List.reduce (
-        fun acc str -> 
-            $"%s{acc},%s{str}"
-    ) strList
-
-let createNodesIfNotExist (nodes: Node list) =
-    let queriesForNodes = List.mapi convertNodeToQueryStr nodes
-    let clientWithSetStrAndParam = 
-        List.fold (
-            fun acc (mergeStr, index, node, nodeKeyValue) -> 
-                let nodeName = $"node%i{index}"
-                let setStr = $"%s{nodeName} = $%s{nodeName}"
-                let nodeKey = $"nodeKeyValue%i{index}" 
-                let client' = acc |> getClientWithMergeStr mergeStr
-                client'.OnCreate()
-                |> getClientWithSetStr setStr
-                |> getClientWithNodeInputParameter node nodeName
-                |> getClientWithKeyValueParameter (nodeKey, nodeKeyValue)
-                
-        ) clientWithCypher queriesForNodes
-        
-    clientWithSetStrAndParam.ExecuteWithoutResultsAsync()
-    |> Async.AwaitTask 
-    |> Async.RunSynchronously
-
-let createSingleNodeIfNotExist (node: Node) =
-    let nodes = [node]
-    createNodesIfNotExist nodes
-
-let createMultipleNodesIfNotExist (nodes: Node list) =
-    try
-        createNodesIfNotExist nodes
-    with
-    | error ->
-        let message = $"Exception in creating nodes: %s{error.Message}"
-        printfn $"%A{message}"
-
-let relateNodes (sourceNode': Node) (targetNode': Node) (relationship: string) (relationshipProperty: RelationshipDto option) =
-    let sourceNodeAttributes = getNodeAttributes(sourceNode')
-    let targetNodeAttributes = getNodeAttributes(targetNode')
-    let querySource = $"(sourceNode:%s{sourceNodeAttributes.Label})" 
-    let queryTarget = $"(targetNode:%s{targetNodeAttributes.Label})"
-    let queryRelationship = 
-        match relationshipProperty with
-        | Some p -> 
-            let relationshipAttributes = getRelationshipAttributes(p)
-            $"(sourceNode)-[:%s{relationship}%s{relationshipAttributes}]->(targetNode)"
-        | None -> $"(sourceNode)-[:%s{relationship}]->(targetNode)"
-    clientWithCypher
-        .Match(querySource, queryTarget)
-        .Where(fun sourceNode -> sourceNode.Checksum = sourceNodeAttributes.KeyValue)
-        .AndWhere(fun targetNode -> targetNode.Checksum = targetNodeAttributes.KeyValue)
-        .Create(queryRelationship)
-        .ExecuteWithoutResultsAsync()
-    |> Async.AwaitTask |> Async.RunSynchronously
-
-let deleteNode (node: Node) =
-    let nodeAttributes = getNodeAttributes(node)
-    let query = $"(node:%s{nodeAttributes.Label})"
-    clientWithCypher
-        .Match(query)
-        .Where(fun node -> node.Checksum = nodeAttributes.KeyValue)
-        .DetachDelete("node")
-        .ExecuteWithoutResultsAsync()
-    |> Async.AwaitTask |> Async.RunSynchronously
-
-let deleteAllNodes () =
-    clientWithCypher
-        .Match("(node)")
-        .DetachDelete("node")
-        .ExecuteWithoutResultsAsync()
-    |> Async.AwaitTask |> Async.RunSynchronously
-
-let create (node: Node) =
-
-    let cypherCreate (node: Node) =
-        try
-            let label = getNodeLabel node
-            let query = $"(n:%s{label} $node)" 
-            let client' = getClientWithNodeInputParameter node "node" clientWithCypher
-            client'
-                .Create(query)
-                .ExecuteWithoutResultsAsync()
-                |> Async.AwaitTask
-                |> Async.RunSynchronously
-
-            let message = $"%s{label} is created successfully!"
-            Ok(node, message)
-        with
-        | error ->
-            let message = $"Exception in creating node: %s{error.Message}"
-            Error(message)
-
-    cypherCreate node
-
-let update (node: Node) =
-
-    let cypherUpdate (node: Node) =
-        try
-            let label = getNodeLabel node
-            let query = $"(n:%s{label})"
-            let client' = getClientWithNodeInputParameter node "node" clientWithCypher
-            client'
-                .Match(query)
-                .ExecuteWithoutResultsAsync()
-                |> Async.AwaitTask
-                |> Async.RunSynchronously
-
-            let message = $"%s{label} is created successfully!"
-            Ok(node, message)
-        with
-        | error ->
-            let message = $"Exception in creating node: %s{error.Message}"
-            Error(message)
-
-    cypherUpdate node
 
 let convertRelationToQueryStr (index: int) (relationShipInfo: RelationShipInfo) =
     let sourceNode = relationShipInfo.SourceNode
@@ -367,28 +131,136 @@ let convertRelationToQueryStr (index: int) (relationShipInfo: RelationShipInfo) 
             let relationshipAttributes = getRelationshipAttributes(p)
             $"(%s{sourceNodeName})-[:%s{relationship}%s{relationshipAttributes}]->(%s{targetNodeName})"
         | None -> $"(%s{sourceNodeName})-[:%s{relationship}]->(%s{targetNodeName})"
-    (querySourceStr, queryTargetStr, queryRelationshipStr, index, sourceNodeName, sourceNodeAttributes.KeyValue, targetNodeName, targetNodeAttributes.KeyValue, relationship)
+    (querySourceStr, queryTargetStr, queryRelationshipStr)
 
-let createNodesRelationship (relationShipInfos: RelationShipInfo list)=
+// Get
+let getAllNodesAsync () : Async<NodeDTOReturnData> =
+    let result =
+        clientWithCypher
+            .Match("(node)")
+            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
+            .ResultsAsync
+    let nodesAS =
+        result |> Async.AwaitTask 
+    nodesAS
+
+let getAllRelationshipsAsync () =
+    let queryMatch = sprintf "(node)-[r]->(result)" 
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .ReturnDistinct(fun (r: Cypher.ICypherResultItem) -> r.Type())
+            .ResultsAsync
+    let relationships =
+        result |> Async.AwaitTask 
+    relationships
+let getNodesByChecksumAsync (checksum: Checksum) =
+    let (Checksum checksum) = checksum
+    let queryMatch = sprintf "(node)"
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .Where(fun node -> node.Checksum = checksum)
+            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
+            .ResultsAsync
+    let nodes =
+        result |> Async.AwaitTask 
+    nodes
+
+let getNodesByLabelAsync (label: NodeLabel) =
+    let queryMatch = $"(node: %s{label})"
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .Return(fun (node: Cypher.ICypherResultItem) -> node.As(), node.Labels())
+            .ResultsAsync
+    let nodes =
+        result |> Async.AwaitTask
+    nodes
+
+let getPathsByNodeChecksumAsync (relationship: string option, direction: PathDirection, checksum: string, maxPathLength: string) =
+    let queryMatch = 
+        match relationship with
+        | Some r ->
+            match direction with
+            | TO -> $"p = (node)<-[:%s{r}%s{maxPathLength}]-(targetNode)"
+            | FROM -> $"p = (node)-[:%s{r}%s{maxPathLength}]->(targetNode)"
+        | None ->
+            match direction with
+            | TO -> $"p = (node)<-[%s{maxPathLength}]-(targetNode)"
+            | FROM -> $"p = (node)-[%s{maxPathLength}]->(targetNode)"
+    let result =
+        clientWithCypher
+            .Match(queryMatch)
+            .Where(fun node -> node.Checksum = checksum)
+            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
+            .ResultsAsync
+        |> Async.AwaitTask 
+    result
+
+let getPathsAsync (relationship: string, relationshipProperty: string option, relationshipPropertyValue: string option, direction: PathDirection) =
+    let baseQuery =
+        match direction with
+        | TO -> $"p = (node)<-[relationship:%s{relationship}]-(targetNode)"
+        | FROM ->  $"p = (node)-[relationship:%s{relationship}]->(targetNode)"
+    
+    let queryMatch = 
+        match relationshipProperty with 
+        | Some p -> 
+            match relationshipPropertyValue with 
+            | Some pv ->
+                match direction with
+                | TO -> $"p = (node)<-[relationship:%s{relationship} {{%s{p}:'%s{pv}'}}]-(targetNode)"
+                | FROM -> $"p = (node)-[relationship:%s{relationship} {{%s{p}:'%s{pv}'}}]->(targetNode)"
+            | None -> baseQuery
+        | None -> baseQuery
+
+    let result =
+        clientWithCypher.Match(queryMatch)
+            .Return(fun (p: Cypher.ICypherResultItem) -> p.As())
+            .ResultsAsync
+        |> Async.AwaitTask
+    result
+
+// Create
+let createNodesIfNotExistAsync (nodes: Node list) =
+    let queriesForNodes = List.mapi convertNodeToQueryStr nodes
+    let clientWithSetStrAndParam = 
+        List.fold (
+            fun acc (mergeStr, index, node, nodeKeyValue) -> 
+                let nodeName = $"node%i{index}"
+                let setStr = $"%s{nodeName} = $%s{nodeName}"
+                let nodeKey = $"nodeKeyValue%i{index}" 
+                let client' = acc |> getClientWithMergeStr mergeStr
+                client'.OnCreate()
+                |> getClientWithSetStr setStr
+                |> getClientWithNodeInputParameter node nodeName
+                |> getClientWithKeyValueParameter (nodeKey, nodeKeyValue)
+                
+        ) clientWithCypher queriesForNodes
+        
+    clientWithSetStrAndParam.ExecuteWithoutResultsAsync()
+    |> Async.AwaitTask 
+
+let createNodesRelationshipAsync (relationShipInfos: RelationShipInfo list)=
     let queriesForNodes = List.mapi convertRelationToQueryStr relationShipInfos
     let clientWithMatchParam = 
         List.fold (
-            fun (acc: Cypher.ICypherFluentQuery) (querySourceStr, queryTargetStr, _, _, _, _, _, _, _) -> 
+            fun (acc: Cypher.ICypherFluentQuery) (querySourceStr, queryTargetStr, _) -> 
                 acc.Match(querySourceStr, queryTargetStr)
         ) clientWithCypher queriesForNodes
     let clientWithCreateParam = 
         List.fold (
-            fun (acc: Cypher.ICypherFluentQuery) (_, _, queryRelationshipStr, _, _, _, _, _, _) -> 
+            fun (acc: Cypher.ICypherFluentQuery) (_, _, queryRelationshipStr) -> 
                 acc.Create(queryRelationshipStr)
         ) clientWithMatchParam queriesForNodes
     clientWithCreateParam.ExecuteWithoutResultsAsync()
     |> Async.AwaitTask 
-    |> Async.RunSynchronously
 
-let relateMultipleNodes (relationShipInfos: RelationShipInfo list) =
-    try
-        createNodesRelationship relationShipInfos
-    with
-    | error ->
-        let message = $"Exception in creating nodes relationship: %s{error.Message}"
-        printfn $"%A{message}"
+// Delete
+let deleteAllNodesAsync () =
+    clientWithCypher
+        .Match("(node)")
+        .DetachDelete("node")
+        .ExecuteWithoutResultsAsync()
+    |> Async.AwaitTask

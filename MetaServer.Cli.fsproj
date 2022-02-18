@@ -27,13 +27,16 @@
     <Compile Include="Dto.fs" />
     <Compile Include="./config/Input.fs" />
     <Compile Include="Settings.fs" />
-    <Compile Include="Db.fs" />
+    <Compile Include="DbConfig.fs" />
     <Compile Include="Neo4jDb.fs" />
+    <Compile Include="Neo4jDbHelper.fs" />
     <Compile Include="FVCOM\InputConfig.fs" />
     <Compile Include="FVCOM\CommitTree.fs" />
     <Compile Include="FileIOInstruction.fs" />
+    <Compile Include="DbInstruction.fs" />
     <Compile Include="Command.fs" />
     <Compile Include="FileIO.fs" />
+    <Compile Include="Db.fs" />
     <Compile Include="Main.fs" />
     <Content Include="lib\Parser.dll" />
   </ItemGroup>

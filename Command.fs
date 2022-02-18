@@ -1,8 +1,9 @@
 module Command
 
+open DbInstruction
+open FileIOInstruction
 open InterpretationProgram
 open Logger
-open FileIOInstruction
 let interpret program =
   // 1. get the extra parameters and partially apply them to make all the interpreters
   // have a consistent shape
@@ -21,7 +22,7 @@ let interpret program =
         | Instruction inst ->
             match inst with
             | :? LoggerInstruction<Program<_>> as inst -> interpretLogger loop inst
-//            | :? DbInstruction<Program<_>> as inst -> interpretDbInstruction' loop inst
+            | :? DbInstruction<Program<_>> as inst -> interpretDbInstruction loop inst
             | :? FileIOInstruction<Program<_>> as inst -> interpretFileIOInstruction loop inst
             | _ -> failwithf $"unknown instruction type {inst.GetType()}"
         | NotYetDone p ->
@@ -33,33 +34,73 @@ let interpret program =
   // 3. start the loop
   let initialProgram = program |> asyncResult.Return
   loop initialProgram
+  
+// For DB
 
-//let createTestFile (file: FileMeta) =
-//  createFile file
-//  |> interpret
-//  |> Async.RunSynchronously
+// Get
+let getAllNodesApi _ =
+  Shell.getAllNodes ()
+  |> interpret
+  |> Async.RunSynchronously
+let getAllRelationshipsApi _ =
+  Shell.getAllRelationships ()
+  |> interpret
+  |> Async.RunSynchronously
+let getNodesByChecksumApi checksum =
+  Shell.getNodesByChecksum checksum
+  |> interpret
+  |> Async.RunSynchronously
+let getNodesByLabelApi label =
+  Shell.getNodesByLabel label
+  |> interpret
+  |> Async.RunSynchronously
+let getPathsApi input =
+  Shell.getPaths input
+  |> interpret
+  |> Async.RunSynchronously
+let getPathsByNodeChecksumApi input =
+  Shell.getPathsByNodeChecksum input
+  |> interpret
+  |> Async.RunSynchronously
 
+// Create
+let createNodesApi nodes =
+  Shell.createNodes nodes
+  |> interpret
+  |> Async.RunSynchronously
+let createNodesRelationshipApi nodes =
+  Shell.createNodesRelationship nodes
+  |> interpret
+  |> Async.RunSynchronously
+
+// Delete
+let deleteAllNodesApi _ =
+  Shell.deleteAllNodes ()
+  |> interpret
+  |> Async.RunSynchronously
+
+// For FileIO
 let copyTestDirectoryApi copyTestDirectoryApiInput =
-  FileIOInstruction.Shell.copyDirectory copyTestDirectoryApiInput
+  Shell.copyDirectory copyTestDirectoryApiInput
   |> interpret
   |> Async.RunSynchronously
 let copyTestFileApi copyTestFileApiInput =
-  FileIOInstruction.Shell.copyFile copyTestFileApiInput
+  Shell.copyFile copyTestFileApiInput
   |> interpret
   |> Async.RunSynchronously
 let createTestDirectoryApi directoryPath =
-  FileIOInstruction.Shell.createDirectoryOnly directoryPath
+  Shell.createDirectoryOnly directoryPath
   |> interpret
   |> Async.RunSynchronously
 let createTestFileApi createTestFileApiInput =
-  FileIOInstruction.Shell.createFileOnly createTestFileApiInput
+  Shell.createFileOnly createTestFileApiInput
   |> interpret
   |> Async.RunSynchronously
 let createTestSymbolicLinkApi createTestSymbolicLinkApiInput =
-  FileIOInstruction.Shell.createSymbolicLink createTestSymbolicLinkApiInput
+  Shell.createSymbolicLink createTestSymbolicLinkApiInput
   |> interpret
   |> Async.RunSynchronously
 let updateTestFileApi updateTestFileApiInput =
-  FileIOInstruction.Shell.updateFileOnly updateTestFileApiInput
+  Shell.updateFileOnly updateTestFileApiInput
   |> interpret
   |> Async.RunSynchronously

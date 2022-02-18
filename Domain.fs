@@ -146,6 +146,25 @@ type FileNode = {
   Node: Node
   Type: FileType
 }
+
+type PathDirection =
+    | TO
+    | FROM
+
+type GetPathsByNodeInput = {
+    Checksum: Checksum
+    Direction: PathDirection
+    MaxPathLength: string
+    RelationshipOpt: string option
+}
+
+type GetPathsInput = {
+    Direction: PathDirection
+    Relationship: string
+    RelationshipPropertyOpt: string option
+    RelationshipPropertyValueOpt: string option
+}
+
 let getChecksumListArrayFromFiles (files: File list)= 
   files
   |> Array.ofList

@@ -4,6 +4,11 @@ open Instruction
 
 module AsyncResult =
   let asyncResultReturn (x: 'a) : Async<Result<'a, 'b>> = async { return Ok x }
+  let asyncResultReturnAsync (x: Async<'a>) : Async<Result<'a, 'b>> =
+    async {
+      let! r = x
+      return Ok r
+    }
   
   let map (f: 'a -> 'b) (asyncResult: Async<Result<'a, 'c>>) : Async<Result<'b, 'c>> =
     async {
@@ -22,10 +27,13 @@ module AsyncResult =
       | Error x -> return Error x 
     }
 
+  let bindAsync (f: 'a -> Async<Result<'b, 'c>>) (async: Async<'a>) : Async<Result<'b, 'c>> = 
+    bind f (asyncResultReturnAsync async)
 type AsyncResultBuilder() =
   member _.Return(x) = AsyncResult.asyncResultReturn x
   member _.ReturnFrom x = x
   member _.Bind(x,f) = AsyncResult.bind f x
+  member _.Bind(x,f) = AsyncResult.bindAsync f x
   member _.Map(x, f) = AsyncResult.map f x
 
 let asyncResult = AsyncResultBuilder()

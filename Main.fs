@@ -12,6 +12,7 @@ open FVCOM.CommitTree
 open FVCOM.InputConfig
 open Input
 open Neo4jDb
+open Neo4jDbHelper
 open Parser
 open System
 open Util
@@ -229,35 +230,47 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     printfn $"%s{ex.Message}"
                     Error IOError
     | _ ->
-        deleteAllNodes()
+//        deleteAllNodes()
         Ok ()
 
 let runList (runArgs: ParseResults<ListArgs>) =
     try 
         match runArgs with
         | args when args.Contains(All) ->
-            let result = getAllNodes ()
-            printfn $"Result: %A{result} "
+            Db.Neo4jDbService.getAllNodes() |> ignore
             Ok ()
         | args when args.Contains(Label) ->
             // Get the label
             let labelArgs = runArgs.GetResult(Label)
             // Get the nodes with specific label
-            let result = getNodesByLabel(labelArgs)
-            printfn $"Result: %A{result} "
+            Db.Neo4jDbService.getNodesByLabel labelArgs |> ignore
             Ok ()
         | args when (args.Contains(Relationship) && args.Contains(Checksum)) ->
             // Get the relationship and checksum
-            let checksum = runArgs.GetResult(Checksum)
+            let checksum = Domain.Checksum (runArgs.GetResult(Checksum))
             // Get the nodes with specific relationship
-            let relationship = runArgs.GetResult(Relationship)
+            let relationshipOpt = runArgs.GetResult(Relationship)
             // Get the maximum path length if any
             let maxPathLength = 
                 match args.Contains(MaxPathLength) with
                 | true -> $"*..%s{runArgs.GetResult(MaxPathLength)}"
                 | false -> "*"
-            let result = getRelatedNodesPath((relationship, checksum, maxPathLength))
-            printfn $"%A{result}"
+            let pathToInput = {
+                Checksum = checksum
+                Direction = TO
+                MaxPathLength = maxPathLength
+                RelationshipOpt = relationshipOpt
+            }
+            let pathFromInput = {
+                Checksum = checksum
+                Direction = FROM
+                MaxPathLength = maxPathLength
+                RelationshipOpt = relationshipOpt
+            }
+            let pathTo = Db.Neo4jDbService.getPathsByNodeChecksum pathToInput
+            let pathFrom = Db.Neo4jDbService.getPathsByNodeChecksum pathFromInput
+            let path = pathTo@pathFrom
+            printfn $"{path}"
             Ok ()
         | args when args.Contains(Relationship) ->
             // Get the relationship
@@ -271,29 +284,41 @@ let runList (runArgs: ParseResults<ListArgs>) =
                     match args.Contains(RelationshipPropertyValue) with
                     | true -> 
                         let relationshipPropertyValue = runArgs.GetResult(RelationshipPropertyValue)
-                        let result = getRelationships(r, Some relationshipProperty, Some relationshipPropertyValue)
-                        printfn $"%A{result}"
+                        let pathToInput = {
+                            Direction = TO
+                            Relationship = r
+                            RelationshipPropertyOpt = Some relationshipProperty
+                            RelationshipPropertyValueOpt = Some relationshipPropertyValue
+                        }
+                        let pathTo = Db.Neo4jDbService.getPaths pathToInput
+                        let path = pathTo |> List.distinct
+                        printfn $"{path}"
                         Ok ()
                     | false ->
-                        printfn "%s" "No Relationship property value provided"
+                        printfn $"No Relationship property value provided"
                         Error ArgumentsNotSpecified
                 | false ->
                     // Get the relationship with all properties if not specified
-                    let result = getRelationships(r, None, None)
-                    printfn $"%A{result}"
+                    let pathToInput = {
+                        Direction = TO
+                        Relationship = r
+                        RelationshipPropertyOpt = None
+                        RelationshipPropertyValueOpt = None
+                    }
+                    let pathTo = Db.Neo4jDbService.getPaths pathToInput
+                    let path = pathTo |> List.distinct
+                    printfn $"{path}"
                     Ok ()
             | None ->
                 // Get all relationships if not specified
-                let result = getAllRelationship()
-                for i in result do
-                    printfn $"%s{i}"
+                let relationships = Db.Neo4jDbService.getAllRelationships ()
+                printfn $"{relationships}"
                 Ok ()
         | args when args.Contains(Checksum) ->
             // Get the checksum
             let checksum = runArgs.GetResult(Checksum)
             // Get the nodes with specific checksum
-            let result = getNodeByChecksum(checksum)
-            printfn $"%A{result}"
+            Db.Neo4jDbService.getNodesByChecksum (Domain.Checksum checksum) |> ignore
             Ok ()
         | _ -> 
             printfn $"No argument provided"
@@ -330,8 +355,6 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
             let targetDirectory = RelativePath (defaultArg targetDirectoryArgs "test")
             let targetDirectoryFullPath = Domain.getFullPath(basePath, targetDirectory)
 
-//            let targetFullPath = { BasePath = basePath ; RelativePath = targetDirectory }
-
             // Start dealing with input
             // Get the content from the config file
             let configContent = IO.File.ReadAllText configArgs
@@ -351,7 +374,7 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
 
                 // First, parse the input config file to get the directory of input
                 let ioInput = pickIOInput nodes
-                let inputDirectory = Domain.getIOInputDirectory ioInput
+                let inputDirectory = getIOInputDirectory ioInput
                 let inputDirFullPath = Domain.getFullPath(basePath, inputDirectory)
                 // Next, get the input files 
                 let fileNodes = getExistingInputFiles inputDirFullPath nodes
@@ -444,31 +467,25 @@ let runTest (runArgs: ParseResults<TestInitArgs>) =
                 }
                 createSimulationDir createSimulationDirInput
                 // End of creating directory for the calculation
-//                
+               
                 // All side effects for DB:
                 // Side Effect: Delete All Previous Nodes if specified in DB
 //                let shouldCleanAll = args.Contains(CleanAll)
 //                if shouldCleanAll then
 //                    deleteAllNodes()
                 
-//                let simulationNode = Simulation { Checksum = inputConfigChecksum }
-//                let treeFileNode = getTreeFileNode inputConfigChecksum targetDirectoryFullPath
-//
-//                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFileNodes@outputFileNodes
-//                // Side effect [all]: Create all the nodes in DB
-//                createMultipleNodesIfNotExist allNodes
-//                
-//                let inputRelationshipInfos = getInputRelationshipInfos simulationNode inputFilesWithType
-//                let inputConfigFileRelationshipInfo = getInputConfigFileRelationshipInfo simulationNode inputConfigFileNode
-//                let treeFileRelationshipInfo = getTreeFileRelationshipInfo simulationNode treeFileNode
-//                let outputRelationshipInfos: RelationShipInfo list = 
-//                    List.map (
-//                        fun file -> 
-//                            { SourceNode = simulationNode ; TargetNode = file ; Relationship = "HAS_OUTPUT" ; RelationshipProps = None }
-//                    ) outputFileNodes
-//                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
-//                // Side effect [all]: Relate all the nodes with simulation in DB
-//                relateMultipleNodes relationshipList
+                let simulationNode = Simulation { Checksum = inputConfigChecksum }
+                let treeFileNode = getTreeFileNode inputConfigChecksum targetDirectoryFullPath
+                let allNodes = treeFileNode::simulationNode::inputConfigFileNode::inputFileNodes@outputFileNodes
+                // Side effect [all]: Create all the nodes in DB
+                Db.Neo4jDbService.createNodes allNodes
+     
+                let inputRelationshipInfos = getInputRelationshipInfos simulationNode fileNodes
+                let inputConfigFileRelationshipInfo = getInputConfigFileRelationshipInfo simulationNode inputConfigFileNode
+                let treeFileRelationshipInfo = getTreeFileRelationshipInfo simulationNode treeFileNode
+                let outputRelationshipInfos = getOutputRelationshipInfos simulationNode outputFileNodes
+                let relationshipList = inputConfigFileRelationshipInfo::treeFileRelationshipInfo::inputRelationshipInfos@outputRelationshipInfos
+                Db.Neo4jDbService.createNodesRelationship relationshipList
                
                 Ok ()
             | Error e -> 

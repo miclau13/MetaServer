@@ -5,6 +5,13 @@ open System.IO
 open System.Text.RegularExpressions
 open System.Security.Cryptography
 
+type ResultBuilder() =
+    member this.Return x = Ok x
+    member this.Zero() = Ok ()
+    member this.Bind(xResult,f) = Result.bind f xResult
+
+let result = ResultBuilder()
+
 let (|RegexGroup|_|) pattern (groupIndex: int) input  =
     let m = Regex.Match(input, pattern)
     if m.Success then Some m.Groups.[groupIndex].Value else None
