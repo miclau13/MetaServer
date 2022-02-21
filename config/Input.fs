@@ -1,6 +1,5 @@
 module Input
 
-//open Domain
 open Logger
 open Util
 type RawInput =
@@ -10,10 +9,6 @@ type InputConfigReplacement = {
   Input: string
   Replacement: string
 }
-//type InputFile = {
-//  Node: Node
-//  Type: string
-//}
 
 let getFilePropertyRegex (property: string) = 
   $"(.*?%s{property})(\s*=\s*'*)([^',]*)('*\s*)(,?)"

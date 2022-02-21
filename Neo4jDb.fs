@@ -12,9 +12,6 @@ type NodeAttributes = {
     // TODO find real type of Key value
     KeyValue: string
 }
-type Neo4jNode = {
-    Checksum: string
-}
 
 type RelationShipInfo = {
     SourceNode: Node 
@@ -27,16 +24,6 @@ type Neo4jOutputData<'T> = {
 }
 
 let clientWithCypher = getDbClient ()
-
-let getNodeLabel (node: Node) =
-    let label =
-        match node with
-        | ConfigFileInput _ -> nameof ConfigFileInput
-        | File _ -> nameof File
-        | IOInput _ -> nameof IOInput
-        | FVCOMInput _ -> nameof FVCOMInput
-        | Simulation _ -> nameof Simulation
-    label
 
 // 18/11/2021 & 19/11/2021
 let getPathResult (direction: PathDirection) (pathResultSeq: seq<Neo4jClient.ApiModels.Cypher.PathsResultBolt>) = 
@@ -97,7 +84,7 @@ let getClientWithNodeInputParameter (node: Node) (paramName: string) (client: Cy
     | FVCOMInputDto dto -> client.WithParam(paramName, dto)
     | SimulationDto dto -> client.WithParam(paramName, dto)
 
-let getNodeAttributes (node: Node) = 
+let getNodeAttributes (node: Node) : NodeAttributes = 
     match node with
         | ConfigFileInput file -> { Label = "Config"; Key = "ConfigType"; KeyValue = file.ConfigType |> FileType.value }
         | Simulation simulation -> { Label = "Simulation"; Key = "Checksum"; KeyValue = simulation.Checksum |> Checksum.value }
@@ -112,7 +99,6 @@ let convertNodeToQueryStr (index: int) (node: Node) =
     let nodeKeyValue = nodeAttributes.KeyValue
     let mergeStr = $"(node%i{index}:%s{nodeLabel} {{%s{nodeKey}: $nodeKeyValue%i{index}}})"
     (mergeStr, index, node, nodeKeyValue)
-
 
 let convertRelationToQueryStr (index: int) (relationShipInfo: RelationShipInfo) =
     let sourceNode = relationShipInfo.SourceNode

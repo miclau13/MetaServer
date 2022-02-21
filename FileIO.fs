@@ -46,7 +46,6 @@ module InputFile =
             createInputFile(sourceDirPath, targetDirPath)
         )
 
-
 module CalculationDirectory =
     type CaseTitle = string
 

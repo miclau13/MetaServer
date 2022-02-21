@@ -36,8 +36,6 @@ type FileIOInstruction<'a> =
   | CreateDirectory of DestDirectoryPath * next:(unit-> 'a)
   | CreateFile of CreateFileInput * next:(unit-> 'a)
   | CreateSymbolicLink of CreateSymbolicLinkInput * next:(unit-> 'a)
-//  | DeleteFile of FileInfo * next:(unit-> 'a)
-//  | DeleteDirectory of DirectoryInfo * next:(unit-> 'a)
   | UpdateFile of UpdateFileInput * next:(unit-> 'a)
   interface IInstruction<'a> with
     member this.Map f =
@@ -52,10 +50,6 @@ type FileIOInstruction<'a> =
           CreateFile (createFileInput, next >> f)
       | CreateSymbolicLink (createSymbolicLinkInput, next) ->
           CreateSymbolicLink (createSymbolicLinkInput, next >> f)
-//      | DeleteFile (fileInfo,next) ->
-//          DeleteFile (fileInfo,next >> f)
-//      | DeleteDirectory (folderInfo,next) ->
-//          DeleteDirectory (folderInfo,next >> f)
       | UpdateFile (updateFileInput, next) ->
           UpdateFile (updateFileInput, next >> f)
       :> IInstruction<_>
@@ -70,12 +64,6 @@ let createFile createFileInput =
   Instruction (CreateFile(createFileInput, Stop))
 let createSymbolicLink createSymbolicLinkInput =
   Instruction (CreateSymbolicLink(createSymbolicLinkInput, Stop))
-//
-//let DeleteFile fileInfo =
-//  Instruction (DeleteFile(fileInfo,Stop))
-//let DeleteDirectory folderInfo =
-//  Instruction (DeleteDirectory(folderInfo,Stop))
-//
 let updateFile updateFileInput =
   Instruction (UpdateFile(updateFileInput,Stop))
 

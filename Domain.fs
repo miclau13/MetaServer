@@ -309,7 +309,7 @@ let initOutputFileNodes (files: RelativePath []) (outputDestFullDir: FullPath) (
           Path = Path dir
           Name = Name nameWithChecksum
           Format = Format format
-          Checksum = Checksum checksum
+          Checksum = Checksum nameWithChecksum
       }
       result
     ) files

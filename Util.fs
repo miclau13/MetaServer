@@ -1,6 +1,5 @@
 module Util
 
-// create an active pattern
 open System.IO
 open System.Text.RegularExpressions
 open System.Security.Cryptography

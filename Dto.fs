@@ -1,10 +1,11 @@
 module Dto 
 
 open Domain
-open System
 open FVCOMInput
 open IOInput
+open Json
 open Neo4jClient
+open System
 open Util
 
 type NodeLabel = string
@@ -211,11 +212,11 @@ let toDomain (dto: Dto<NodeDto>) :Result<Node,string> =
 let jsonFromDomain (input: Node) =
   let nodeDto = input |> fromDomain
   match nodeDto with 
-  | FileDto dto -> dto |> Json.serialize
-  | ConfigFileInputDto dto -> dto |> Json.serialize
-  | FVCOMInputDto dto -> dto |> Json.serialize
-  | IOInputDto dto -> dto |> Json.serialize
-  | SimulationDto dto -> dto |> Json.serialize
+  | FileDto dto -> dto |> serialize
+  | ConfigFileInputDto dto -> dto |> serialize
+  | FVCOMInputDto dto -> dto |> serialize
+  | IOInputDto dto -> dto |> serialize
+  | SimulationDto dto -> dto |> serialize
 
 
 let getNodeFromDtoData (dtoData: Dto<NodeDto>) = 
@@ -228,7 +229,7 @@ module FVCOMInputDto =
     result {
       let! deserializedValue =
           jsonString
-          |> Json.deserialize<Dto<FVCOMInputDto>>
+          |> deserialize<Dto<FVCOMInputDto>>
           |> Result.mapError DeserializationException
       let fvcomInputDto = deserializedValue.data
       let nodeDto = FVCOMInputDto fvcomInputDto
@@ -247,7 +248,7 @@ module FileDto =
     result {
       let! deserializedValue =
           jsonString
-          |> Json.deserialize<Dto<FileDto>>
+          |> deserialize<Dto<FileDto>>
           |> Result.mapError DeserializationException
       let fileDto = deserializedValue.data
       let nodeDto = FileDto fileDto
@@ -267,7 +268,7 @@ module IOInputDto =
     result {
       let! deserializedValue =
           jsonString
-          |> Json.deserialize<Dto<IOInputDto>>
+          |> deserialize<Dto<IOInputDto>>
           |> Result.mapError DeserializationException
       let ioInputDto = deserializedValue.data
       let nodeDto = IOInputDto ioInputDto
@@ -287,7 +288,7 @@ module SimulationDto =
     result {
       let! deserializedValue =
           jsonString
-          |> Json.deserialize<Dto<SimulationDto>>
+          |> deserialize<Dto<SimulationDto>>
           |> Result.mapError DeserializationException
       let simulationDto = deserializedValue.data
       let nodeDto = SimulationDto simulationDto
