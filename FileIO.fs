@@ -7,15 +7,15 @@ open System
 type FileContent = string
 
 let createDirectory (destDirFullPath: FullPath) =
-    createTestDirectoryApi destDirFullPath |> ignore
+    createDirectoryApi destDirFullPath |> ignore
 
 let createFile (fileName: RelativePath, fileChecksum: Checksum, fileContent: FileContent, destDirFullPath: FullPath) =
     let fileChecksumDirFullPath = getFileChecksumDirFullPath (fileChecksum, destDirFullPath)
-    createTestDirectoryApi fileChecksumDirFullPath |> ignore
+    createDirectoryApi fileChecksumDirFullPath |> ignore
     
     let destInputFileName = getChecksumFileName fileChecksum fileName
     let destInputFilePath = getFullPath(fileChecksumDirFullPath, destInputFileName)
-    createTestFileApi (destInputFilePath, fileContent) |> ignore
+    createFileApi (destInputFilePath, fileContent) |> ignore
 
 module InputFile = 
     type CreateInputFilesInput = {
@@ -28,12 +28,12 @@ module InputFile =
         let fileChecksum = file.Checksum
         let fileChecksumDir = getChecksumDirFromChecksum fileChecksum
         let fileChecksumDirFullPath = getFullPath(targetDirPath, fileChecksumDir)
-        createTestDirectoryApi fileChecksumDirFullPath |> ignore
+        createDirectoryApi fileChecksumDirFullPath |> ignore
         
         let sourceInputFilePath = getFullPath(sourceDirPath, fileName)
         let destInputFileName = getChecksumFileName fileChecksum fileName
         let destInputFilePath = getFullPath(fileChecksumDirFullPath, destInputFileName)
-        copyTestFileApi (sourceInputFilePath, destInputFilePath) |> ignore
+        copyFileApi (sourceInputFilePath, destInputFilePath) |> ignore
     let createInputFiles createFilesInput =
         let {
             InputFiles = inputFiles
@@ -74,7 +74,7 @@ module CalculationDirectory =
         let pathTargetDir = getFileChecksumDirFullPath(fileChecksum, filesTargetPath)
         let pathTarget = getFullPath(pathTargetDir, symbolicLinkName)
         let symbolicLinkPath = getFullPath(symbolicLinkDirPath, symbolicLinkName)
-        createTestSymbolicLinkApi (symbolicLinkPath, pathTarget)
+        createSymbolicLinkApi (symbolicLinkPath, pathTarget)
         |> ignore
     let createSimulationDir createSimulationDirInput =
         let {
@@ -87,14 +87,14 @@ module CalculationDirectory =
         } = createSimulationDirInput
         // Create Cal Dir
         let calDirectoryFullPath = getCalDirFullPath(basePath)
-        createTestDirectoryApi calDirectoryFullPath |> ignore
+        createDirectoryApi calDirectoryFullPath |> ignore
         // Create Cal checksum dir inside Cal dir
         let calChecksumDir = getSimulationDirectoryName(checksum, caseTitle)
         let calChecksumDirectoryFullPath = getFullPath(calDirectoryFullPath, calChecksumDir)
-        createTestDirectoryApi calChecksumDirectoryFullPath |> ignore
+        createDirectoryApi calChecksumDirectoryFullPath |> ignore
         // Create output dir inside Cal checksum dir
         let calChecksumOutputDirectoryFullPath = getFullPath(calChecksumDirectoryFullPath, getCalOutputDirectory())
-        createTestDirectoryApi calChecksumOutputDirectoryFullPath |> ignore
+        createDirectoryApi calChecksumOutputDirectoryFullPath |> ignore
         // Create symbolic link for the input files
         inputFiles
         |> List.toArray
@@ -148,7 +148,7 @@ module CommitFile =
         let commitFileName = getTreeFileName ()
         let treeDestFileName = getChecksumFileName checksum commitFileName
         let treeDestFileFullPath = getFullPath(treeChecksumDirFullPath, treeDestFileName)
-        updateTestFileApi (treeDestFileFullPath, outputChecksumStr) |> ignore
+        updateFileApi (treeDestFileFullPath, outputChecksumStr) |> ignore
 module OutputFile =
     type CopyOutputDirInput = {
         Checksum: Checksum
@@ -164,4 +164,4 @@ module OutputFile =
         } = copyOutputDirInput
                        
         let (Checksum outputChecksum) = checksum
-        copyTestDirectoryApi (sourceDir, destDir, Some(outputChecksum)) |> ignore
+        copyDirectoryApi (sourceDir, destDir, Some(outputChecksum)) |> ignore

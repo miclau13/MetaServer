@@ -76,7 +76,7 @@ let rec catch expr =
             match res with
             | Ok cont -> catch cont 
             | Error exn -> result (Error exn))
-    | Stop r ->
+    | Stop _ ->
       result (Ok expr)
     
 /// The tryWith operator.
@@ -91,10 +91,10 @@ type ProgramBuilder() =
   member _.Bind(x,f) = bind f x
   member _.Zero() = Stop ()
   
-  member x.Combine(expr1, expr2) = combine expr1 expr2
+//  member x.Combine(expr1, expr2) = combine expr1 expr2
   
-  member x.Delay(func) = delay func
-  member x.TryWith(expr, handler) = tryWith expr handler
+//  member x.Delay(func) = delay func
+//  member x.TryWith(expr, handler) = tryWith expr handler
 
 //// the builder instance
 let program = ProgramBuilder()

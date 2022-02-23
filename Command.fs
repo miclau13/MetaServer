@@ -80,27 +80,27 @@ let deleteAllNodesApi _ =
   |> Async.RunSynchronously
 
 // For FileIO
-let copyTestDirectoryApi copyTestDirectoryApiInput =
-  Shell.copyDirectory copyTestDirectoryApiInput
+let copyDirectoryApi copyDirectoryApiInput =
+  Shell.copyDirectory copyDirectoryApiInput
   |> interpret
   |> Async.RunSynchronously
-let copyTestFileApi copyTestFileApiInput =
-  Shell.copyFile copyTestFileApiInput
+let copyFileApi copyFileApiInput =
+  Shell.copyFile copyFileApiInput
   |> interpret
   |> Async.RunSynchronously
-let createTestDirectoryApi directoryPath =
+let createDirectoryApi directoryPath =
   Shell.createDirectoryOnly directoryPath
   |> interpret
   |> Async.RunSynchronously
-let createTestFileApi createTestFileApiInput =
-  Shell.createFileOnly createTestFileApiInput
+let createFileApi createFileApiInput =
+  Shell.createFileOnly createFileApiInput
   |> interpret
   |> Async.RunSynchronously
-let createTestSymbolicLinkApi createTestSymbolicLinkApiInput =
-  Shell.createSymbolicLink createTestSymbolicLinkApiInput
+let createSymbolicLinkApi createSymbolicLinkApiInput =
+  Shell.createSymbolicLink createSymbolicLinkApiInput
   |> interpret
   |> Async.RunSynchronously
-let updateTestFileApi updateTestFileApiInput =
-  Shell.updateFileOnly updateTestFileApiInput
+let updateFileApi updateFileApiInput =
+  Shell.updateFileOnly updateFileApiInput
   |> interpret
   |> Async.RunSynchronously

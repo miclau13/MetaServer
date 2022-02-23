@@ -69,76 +69,30 @@ let updateFile updateFileInput =
 
 module Pure =
   let copyDirectory (copyDirectoryInput: CopyDirectoryInput) =
-     let sourceDirPath, destDirPath, _ = copyDirectoryInput
      program {
-        do! logInfo($"Copying Files from ({sourceDirPath}) to ({destDirPath})...")
         return CopyDirectoryDecision copyDirectoryInput
       }
   let copyFile (copyFileInput: CopyFileInput) =
-    let sourceFilePath, destFilePath = copyFileInput
-    let isFileExist = checkIfFileExist destFilePath
-    if isFileExist then
-      program {
-       do! logInfo($"File with path ({destFilePath}) already exists, no need to copy file again.")
-       return NoAction
-      }
-    else
-      program {
-        do! logInfo($"Copying File from ({sourceFilePath}) to ({destFilePath})...")
-        return CopyFileDecision copyFileInput
-      }
+    program {
+      return CopyFileDecision copyFileInput
+    }
       
   let createDirectory (directoryPath: DestDirectoryPath) =
-    let isDirectoryExist = checkIfDirectoryExist directoryPath
-    if isDirectoryExist then
-      program {
-       do! logInfo($"Directory with path ({directoryPath}) already exists, no need to create directory again.")
-       return NoAction
-      }
-    else
-      program {
-        do! logInfo($"Creating Directory ({directoryPath})...")
-        return CreateDirectoryDecision directoryPath
-      } 
+    program {
+      return CreateDirectoryDecision directoryPath
+    }  
   let createFile (createFileInput: CreateFileInput) =
-    let destFilePath, _ = createFileInput
-    let isFileExist = checkIfFileExist destFilePath
-    if isFileExist then
-      program {
-       do! logInfo($"File with path ({destFilePath}) already exists, no need to create file again.")
-       return NoAction
-      }
-    else
-      program {
-        do! logInfo($"Creating File ({destFilePath})...")
-        return CreateFileDecision createFileInput
-      }
+    program {
+      return CreateFileDecision createFileInput
+    }
   let createSymbolicLink (createSymbolicLinkInput: CreateSymbolicLinkInput) =
-    let path, pathToTarget = createSymbolicLinkInput
-    let isSymbolicLinkExist = checkIfFileExist path
-    if isSymbolicLinkExist then
-      program {
-       do! logInfo($"Symbolic link ({path}) already exists, no need to create symbolic link again.")
-       return NoAction
-      }
-    else
-      program {
-        do! logInfo($"Creating symbolic link ({path} ------> ({pathToTarget}))...")
-        return CreateSymbolicLinkDecision createSymbolicLinkInput
-      }
+    program {
+      return CreateSymbolicLinkDecision createSymbolicLinkInput
+    }
   let updateFile (updateFileInput: UpdateFileInput) =
-    let destFilePath, _ = updateFileInput
-    let isFileExist = checkIfFileExist destFilePath
-    if not <| isFileExist then
-      program {
-       do! logInfo($"File with path ({destFilePath}) does not exists, cannot update the file.")
-       return NoAction
-      }
-    else
-      program {
-        do! logInfo($"Updating File ({destFilePath})...")
-        return UpdateFileDecision updateFileInput
-      } 
+    program {
+      return UpdateFileDecision updateFileInput
+    } 
 
 module Shell =
   let handleDecision (decision:Decision) :Program<unit> =
@@ -196,6 +150,7 @@ module Shell =
 module Impure =
   let copyDirectory (copyDirectoryInput: CopyDirectoryInput) =
     let FullPath sourceDirPath, FullPath destDirPath, destFileNamePrefix = copyDirectoryInput
+    logInfoMsg($"Copying Files from ({sourceDirPath}) to ({destDirPath})...")
     try
        let srcDir = DirectoryInfo(sourceDirPath)
        for file in srcDir.GetFiles() do
@@ -205,7 +160,7 @@ module Impure =
                 | Some v -> $"%s{v}-%s{fileName}"
                 | None -> fileName
           let tempPath = Path.Combine(destDirPath, fileNameWithPrefix)
-          if checkIfFileExist (FullPath tempPath) then
+          if File.Exists tempPath then
             Ok($"File with path (%s{tempPath}) already exists, no need to copy file again.")
             |> logResult
             |> ignore
@@ -222,50 +177,74 @@ module Impure =
       |> logResult
   let copyFile (copyFileInput: CopyFileInput) =
     let FullPath sourceFilePath, FullPath destFilePath = copyFileInput
-    try
-       File.Copy(sourceFilePath, destFilePath)
-       Ok $"%s{sourceFilePath} --- copied to ---> %s{destFilePath}"
+    logInfoMsg($"Copying File from ({sourceFilePath}) to ({destFilePath})...")
+    let isFileExist = File.Exists destFilePath
+    if not <| isFileExist then
+      try
+         File.Copy(sourceFilePath, destFilePath)
+         Ok $"%s{sourceFilePath} --- copied to ---> %s{destFilePath}"
+         |> logResult
+      with
+      | exn ->
+        Error $"copyFile failed with exception{exn}"
+        |> logResult
+    else
+       Ok $"File with path ({destFilePath}) already exists, no need to copy file again."
        |> logResult
-    with
-    | exn ->
-      Error $"copyFile failed with exception{exn}"
-      |> logResult
   let createDirectory (directoryPath: DestDirectoryPath) =
     let (FullPath dirPath) = directoryPath
-    try
-       let info = Directory.CreateDirectory dirPath
-       Ok $"Directory is created with info: %A{info}"
+    logInfoMsg($"Creating Directory with path ({dirPath})...")
+    let isDirectoryExist = Directory.Exists dirPath
+    if not <| isDirectoryExist then
+      try
+         let info = Directory.CreateDirectory dirPath
+         Ok $"Directory is created with info: %A{info}"
+         |> logResult
+      with
+      | exn ->
+        Error $"copyFile failed with exception{exn}"
+        |> logResult
+    else
+       Ok $"Directory with path ({dirPath}) already exists, no need to create directory again."
        |> logResult
-    with
-    | exn ->
-      Error $"copyFile failed with exception{exn}"
-      |> logResult
   let createFile (createFileInput: CreateFileInput) =
     let FullPath destFilePath, content = createFileInput
-    try
-       let fs = File.Create destFilePath
-       let info = Text.UTF8Encoding(true).GetBytes(content)
-       fs.Write(info, 0, info.Length)
-       fs.Close()
-       Ok $"New file is created at %s{destFilePath}."
-       |> logResult
-    with
-    | exn ->
-      Error $"createFile failed with exception{exn}"
+    logInfoMsg($"Creating File with path ({destFilePath})...")
+    let isFileExist = File.Exists destFilePath
+    if not <| isFileExist then
+      try
+         let fs = File.Create destFilePath
+         let info = Text.UTF8Encoding(true).GetBytes(content)
+         fs.Write(info, 0, info.Length)
+         fs.Close()
+         Ok $"New file is created at %s{destFilePath}."
+         |> logResult
+      with
+      | exn ->
+        Error $"createFile failed with exception{exn}"
+        |> logResult
+    else
+      Ok $"File with path ({destFilePath}) already exists, no need to create file again."
       |> logResult
-      
   let createSymbolicLink (createSymbolicLinkInput: CreateSymbolicLinkInput) =
     let FullPath path, FullPath pathToTarget = createSymbolicLinkInput
-    try
-       let info = File.CreateSymbolicLink(path, pathToTarget)
-       Ok $"Created Symbolic link %s{path}------> %s{pathToTarget} with info {info}."
-       |> logResult
-    with
-    | exn ->
-      Error $"createSymbolicLink failed with exception{exn}"
+    logInfoMsg($"Creating Symbolic link %s{path}------> %s{pathToTarget}...")
+    let isSymbolicLinkExist = File.Exists path
+    if not <| isSymbolicLinkExist then
+      try
+         let info = File.CreateSymbolicLink(path, pathToTarget)
+         Ok $"Created Symbolic link %s{path}------> %s{pathToTarget} with info {info}."
+         |> logResult
+      with
+      | exn ->
+        Error $"CreateSymbolicLink failed with exception{exn}"
+        |> logResult
+    else
+      Ok $"Symbolic link ({path}) already exists, no need to create symbolic link again."
       |> logResult
   let updateFile (updateFileInput: UpdateFileInput) =
     let FullPath destFilePath, content = updateFileInput
+    logInfoMsg($"Updating File (%s{destFilePath})...")
     try
        let fs = File.AppendText destFilePath
        let info = $"%s{Environment.NewLine}%s{content}"
@@ -277,6 +256,7 @@ module Impure =
     | exn ->
       Error $"UpdateFile failed with exception{exn}"
       |> logResult
+      
 let interpretFileIOInstruction interpret (inst: FileIOInstruction<'a>) =
   match inst with
   | CopyDirectory (copyDirectoryInput, next) ->

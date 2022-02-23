@@ -223,7 +223,7 @@ let runInit (runArgs: ParseResults<InitArgs>) =
             let configContent = IO.File.ReadAllText configArgs
             // Run the parser on the config file
             let configContentResult = parseContent FVCOM configContent
-
+            
             match configContentResult with
             | Ok r ->
                 let resultInDomain = r |> parserResultToDomain
@@ -234,7 +234,6 @@ let runInit (runArgs: ParseResults<InitArgs>) =
                     resultInDomain 
                     |> Array.choose (function | Ok v -> Some v | _ -> None)
                     |> Array.toList
-
                 // First, parse the input config file to get the directory of input
                 let ioInput = pickIOInput nodes
                 let inputDirectory = getIOInputDirectory ioInput

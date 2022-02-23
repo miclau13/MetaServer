@@ -70,10 +70,10 @@ type DtoError =
     | InvalidDomainLogic of string
 
 type NodeDto = 
-  | FileDto of FileDto
   | ConfigFileInputDto of ConfigFileInputDto
-  | IOInputDto of IOInputDto
+  | FileDto of FileDto
   | FVCOMInputDto of FVCOMInputDto
+  | IOInputDto of IOInputDto
   | SimulationDto of SimulationDto
 
 type NodeOutput = {

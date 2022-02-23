@@ -61,7 +61,7 @@ let getFileNameAndFormat (file: string) =
 // IO
 let checkIfFileExist (path: string) =
     File.Exists path
-let checkIfDirectoryExist  (path: string) =
+let checkIfDirectoryExist (path: string) =
     File.Exists path
 
 let getFullPath (basePath: string, relativePath: string) =

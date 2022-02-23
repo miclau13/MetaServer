@@ -42,6 +42,10 @@ let interpretLogger interpret inst =
       let newProgramAS = next() |> asyncResult.Return
       interpret newProgramAS
 
+let logInfoMsg = globalLogger.Info
+let logErrorMsg = globalLogger.Info
+let logDebugMsg = globalLogger.Info
+
 let logResult result =
     match result with
     | Ok message -> 
