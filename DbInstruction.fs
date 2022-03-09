@@ -132,33 +132,33 @@ module Shell =
     
 module Impure =
   let createNodes nodes =
-    createNodesIfNotExistAsync nodes |> AsyncResult.asyncResultReturnAsync
+    createNodesIfNotExistAsync nodes |> AsyncResult.asyncReturn
   let createNodesRelationship (input: RelationShipInfo list) =
-    createNodesRelationshipAsync input |> AsyncResult.asyncResultReturnAsync
+    createNodesRelationshipAsync input |> AsyncResult.asyncReturn
   let deleteAllNodes _ =
-    deleteAllNodesAsync() |> AsyncResult.asyncResultReturnAsync
+    deleteAllNodesAsync() |> AsyncResult.asyncReturn
   let getAllNodes _ =
-    getAllNodesAsync() |> AsyncResult.asyncResultReturnAsync
+    getAllNodesAsync() |> AsyncResult.asyncReturn
   let getAllRelationships _ =
-    getAllRelationshipsAsync() |> AsyncResult.asyncResultReturnAsync
+    getAllRelationshipsAsync() |> AsyncResult.asyncReturn
   let getNodesByChecksum checksum =
-    getNodesByChecksumAsync checksum |> AsyncResult.asyncResultReturnAsync
+    getNodesByChecksumAsync checksum |> AsyncResult.asyncReturn
   let getNodesByLabel label =
-    getNodesByLabelAsync label |> AsyncResult.asyncResultReturnAsync
+    getNodesByLabelAsync label |> AsyncResult.asyncReturn
   let getPaths input =
       let direction = input.Direction
       let relationship = input.Relationship
       let relationshipPropertyOpt = input.RelationshipPropertyOpt
       let relationshipPropertyValueOpt = input.RelationshipPropertyValueOpt
       getPathsAsync (relationship, relationshipPropertyOpt, relationshipPropertyValueOpt, direction)
-      |> AsyncResult.asyncResultReturnAsync 
+      |> AsyncResult.asyncReturn 
   let getPathsByNodeChecksum (input: GetPathsByNodeInput) =
       let direction = input.Direction
       let (Checksum checksum) = input.Checksum
       let maxPathLength = input.MaxPathLength
       let relationshipOpt = input.RelationshipOpt
       getPathsByNodeChecksumAsync (relationshipOpt, direction, checksum, maxPathLength)
-      |> AsyncResult.asyncResultReturnAsync
+      |> AsyncResult.asyncReturn
     
 let interpretDbInstruction interpret (inst: DbInstruction<'a>) =
   match inst with

@@ -226,7 +226,7 @@ let createNodesIfNotExistAsync (nodes: Node list) =
         ) clientWithCypher queriesForNodes
         
     clientWithSetStrAndParam.ExecuteWithoutResultsAsync()
-    |> Async.AwaitTask 
+    |> Async.AwaitTask
 
 let createNodesRelationshipAsync (relationShipInfos: RelationShipInfo list)=
     let queriesForNodes = List.mapi convertRelationToQueryStr relationShipInfos

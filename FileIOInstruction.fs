@@ -139,8 +139,7 @@ module Shell =
     program {
       let! decision = Pure.createSymbolicLink createSymbolicLinkInput
       do! handleDecision decision
-    }
-    
+    }  
   let updateFileOnly updateFileInput =
     program {
       let! decision = Pure.updateFile updateFileInput

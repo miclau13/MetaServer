@@ -4,10 +4,13 @@ open Instruction
 
 module AsyncResult =
   let asyncResultReturn (x: 'a) : Async<Result<'a, 'b>> = async { return Ok x }
-  let asyncResultReturnAsync (x: Async<'a>) : Async<Result<'a, 'b>> =
+  let asyncReturn (x: Async<'a>) : Async<Result<'a, exn>> =
+    let choiceAsync = Async.Catch(x)
     async {
-      let! r = x
-      return Ok r
+      let! choice = choiceAsync
+      match choice with
+      | Choice1Of2 x' -> return Ok x'
+      | Choice2Of2 exn -> return Error exn
     }
   
   let map (f: 'a -> 'b) (asyncResult: Async<Result<'a, 'c>>) : Async<Result<'b, 'c>> =
@@ -27,8 +30,9 @@ module AsyncResult =
       | Error x -> return Error x 
     }
 
-  let bindAsync (f: 'a -> Async<Result<'b, 'c>>) (async: Async<'a>) : Async<Result<'b, 'c>> = 
-    bind f (asyncResultReturnAsync async)
+  let bindAsync (f: 'a -> Async<Result<'b, exn>>) (async: Async<'a>) : Async<Result<'b, exn>> = 
+    bind f (asyncReturn async)
+ 
 type AsyncResultBuilder() =
   member _.Return(x) = AsyncResult.asyncResultReturn x
   member _.ReturnFrom x = x

@@ -6,111 +6,65 @@ open Logger
 open Neo4jDbHelper
 
 module Neo4jDbService =
+    let printUnitResult (successStr: string) (result: Result<unit, exn>) =
+        match result with
+        | Ok _ ->
+            let logMsg = $"{successStr}"
+            logInfoMsg logMsg
+        | Error exn ->
+             logErrorMsg $"{exn}"
+    let printNodesResult (result: Result<'a, exn>) =
+        match result with
+        | Ok dataResult ->
+            match dataResult with
+            | Ok nodes ->
+                logInfoMsg $"{nodes}"
+            | Error dtoError ->
+                 let error = $"{dtoError}"
+                 logErrorMsg error
+        | Error exn ->
+             logErrorMsg $"{exn}"
+    
+    let printResult (result: Result<string list, exn>) =
+        match result with
+        | Ok data ->
+           logInfoMsg $"{data}"
+        | Error exn ->
+           logErrorMsg $"{exn}"
     // Get
     let getAllNodes () =
-        let getAllNodesApiResult = getAllNodesApi ()
-        match getAllNodesApiResult with
-        | Ok nodeDTOReturnData -> 
-            let nodeResults = nodeDTOReturnData |> NodeDto.nodeDTOsToDomain
-            List.iter (
-                function
-                | Ok node ->
-                    printfn $"getAllNodesApiResult node: {node}"
-                | Error error ->
-                    printfn $"getAllNodesApiResult DTO error: {error}"
-            ) nodeResults
-            nodeResults
-        | Error error ->
-             globalLogger.Error error
-             // TODO
-             failwith error
+        let result = getAllNodesApi ()
+        Result.map NodeDto.nodeDTOsToDomain result
     let getAllRelationships input =
         let result = getAllRelationshipsApi input
-        match result with
-        | Ok relationshipsDTOData ->
-             relationshipsDTOData
-             |> List.ofSeq
-        | Error error ->
-             globalLogger.Error error
-             // TODO
-             failwith error
+        Result.map List.ofSeq result
     let getNodesByChecksum checksum =
-        let getNodesByChecksumApiResult = getNodesByChecksumApi checksum
-        match getNodesByChecksumApiResult with
-        | Ok nodeDTOReturnData -> 
-            let nodeResults = nodeDTOReturnData |> NodeDto.nodeDTOsToDomain
-            List.iter (
-                function
-                | Ok node ->
-                    printfn $"getNodesByChecksum node: {node}"
-                | Error error ->
-                    printfn $"getNodesByChecksum DTO error: {error}"
-            ) nodeResults
-            nodeResults
-        | Error error ->
-             globalLogger.Error error
-             // TODO
-             failwith error    
+        let result = getNodesByChecksumApi checksum
+        Result.map NodeDto.nodeDTOsToDomain result  
     
     let getNodesByLabel label =
         let result = getNodesByLabelApi label
-        match result with
-        | Ok nodeDTOReturnData -> 
-            let nodeResults = nodeDTOReturnData |> NodeDto.nodeDTOsToDomain
-            printfn $"getNodesByLabel nodeResults: {nodeResults}"
-            nodeResults
-        | Error error ->
-             globalLogger.Error error
-             // TODO
-             failwith error    
+        Result.map NodeDto.nodeDTOsToDomain result  
     let getPaths input =
         let result = getPathsApi input
-        match result with
-        | Ok pathDTOData ->
-            let direction = input.Direction
-            let nodeResults = getPathResult direction pathDTOData
-            nodeResults
-        | Error error ->
-             globalLogger.Error error
-             // TODO
-             failwith error
+        let direction = input.Direction
+        Result.map (getPathResult direction) result  
     let getPathsByNodeChecksum input =
         let result = getPathsByNodeChecksumApi input
-        match result with
-        | Ok pathDTOData ->
-            let direction = input.Direction
-            let nodeResults = getPathResult direction pathDTOData
-            nodeResults
-        | Error error ->
-             globalLogger.Error error
-             // TODO
-             failwith error
+        let direction = input.Direction
+        Result.map (getPathResult direction) result
+        
     // Create
     let createNodes nodes =
-        let createNodesApiResult = createNodesApi nodes
-        match createNodesApiResult with
-        | Ok _ ->
-            let logMsg = $"Nodes ({nodes}) are created successfully."
-            globalLogger.Info logMsg
-        | Error error ->
-            globalLogger.Error error
+        let result = createNodesApi nodes
+        printUnitResult $"Nodes ({nodes}) are created successfully." result
     let createNode node =
         createNodes [node]
-    
     let createNodesRelationship input =
         let result = createNodesRelationshipApi input
-        match result with
-        | Ok _ ->
-            let logMsg = $"Nodes Relationship ({input}) are created successfully."
-            globalLogger.Info logMsg
-        | Error error ->
-            globalLogger.Error error
+        printUnitResult $"Nodes Relationship ({input}) are created successfully." result
+        
     // Delete
     let deleteAllNodes () =
-        let deleteAllNodesApiResult = deleteAllNodesApi ()
-        match deleteAllNodesApiResult with
-        | Ok _ ->
-            let logMsg = $"All nodes are deleted successfully."
-            globalLogger.Info logMsg
-        | Error error ->
-            globalLogger.Error error
+        let result = deleteAllNodesApi ()
+        printUnitResult $"All nodes are deleted successfully." result

@@ -100,13 +100,13 @@ let runList (runArgs: ParseResults<ListArgs>) =
     try 
         match runArgs with
         | args when args.Contains(All) ->
-            Neo4jDbService.getAllNodes() |> ignore
+            Neo4jDbService.getAllNodes() |> Neo4jDbService.printNodesResult
             Ok ()
         | args when args.Contains(Label) ->
             // Get the label
             let labelArgs = runArgs.GetResult(Label)
             // Get the nodes with specific label
-            Neo4jDbService.getNodesByLabel labelArgs |> ignore
+            Neo4jDbService.getNodesByLabel labelArgs |> Neo4jDbService.printNodesResult
             Ok ()
         | args when (args.Contains(Relationship) && args.Contains(Checksum)) ->
             // Get the relationship and checksum
@@ -130,10 +130,8 @@ let runList (runArgs: ParseResults<ListArgs>) =
                 MaxPathLength = maxPathLength
                 RelationshipOpt = relationshipOpt
             }
-            let pathTo = Neo4jDbService.getPathsByNodeChecksum pathToInput
-            let pathFrom = Neo4jDbService.getPathsByNodeChecksum pathFromInput
-            let path = pathTo@pathFrom
-            printfn $"{path}"
+            Neo4jDbService.getPathsByNodeChecksum pathToInput |> Neo4jDbService.printResult
+            Neo4jDbService.getPathsByNodeChecksum pathFromInput |> Neo4jDbService.printResult
             Ok ()
         | args when args.Contains(Relationship) ->
             // Get the relationship
@@ -153,9 +151,7 @@ let runList (runArgs: ParseResults<ListArgs>) =
                             RelationshipPropertyOpt = Some relationshipProperty
                             RelationshipPropertyValueOpt = Some relationshipPropertyValue
                         }
-                        let pathTo = Neo4jDbService.getPaths pathToInput
-                        let path = pathTo |> List.distinct
-                        printfn $"{path}"
+                        Neo4jDbService.getPaths pathToInput |> Neo4jDbService.printResult
                         Ok ()
                     | false ->
                         printfn $"No Relationship property value provided"
@@ -168,20 +164,17 @@ let runList (runArgs: ParseResults<ListArgs>) =
                         RelationshipPropertyOpt = None
                         RelationshipPropertyValueOpt = None
                     }
-                    let pathTo = Neo4jDbService.getPaths pathToInput
-                    let path = pathTo |> List.distinct
-                    printfn $"{path}"
+                    Neo4jDbService.getPaths pathToInput |> Neo4jDbService.printResult
                     Ok ()
             | None ->
                 // Get all relationships if not specified
-                let relationships = Neo4jDbService.getAllRelationships ()
-                printfn $"{relationships}"
-                Ok ()
+               Neo4jDbService.getAllRelationships () |> Neo4jDbService.printResult
+               Ok ()
         | args when args.Contains(Checksum) ->
             // Get the checksum
             let checksum = runArgs.GetResult(Checksum)
             // Get the nodes with specific checksum
-            Neo4jDbService.getNodesByChecksum (Domain.Checksum checksum) |> ignore
+            Neo4jDbService.getNodesByChecksum (Domain.Checksum checksum) |> Neo4jDbService.printNodesResult
             Ok ()
         | _ -> 
             printfn $"No argument provided"

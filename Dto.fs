@@ -343,7 +343,44 @@ module NodeDto =
       | _ -> Error (InvalidDomainLogic $"Should not have more than one label, return with labels{labelArr}")
     result
 
+  let traverseResultA f list =
+    let apply fResult xResult =
+      fResult |> Result.bind (fun f ->
+        let map = Result.bind (f >> Ok)
+        map xResult)
+    // define the applicative functions
+    let (<*>) = apply
+    let retn = Result.Ok
+
+    // define a "cons" function
+    let cons head tail = head :: tail
+
+    // right fold over the list
+    let initState = retn []
+    let folder head tail =
+        retn cons <*> (f head) <*> tail
+
+    List.foldBack folder list initState
+  let traverseResultM f list =
+
+    // define the monadic functions
+    let (>>=) x f = Result.bind f x
+    let retn = Result.Ok
+
+    // define a "cons" function
+    let cons head tail = head :: tail
+
+    // right fold over the list
+    let initState = retn []
+    let folder head tail =
+        f head >>= (fun h ->
+        tail >>= (fun t ->
+        retn (cons h t) ))
+
+    List.foldBack folder list initState
   let nodeDTOsToDomain (nodeDTOs: NodeDTOReturnData) = 
       nodeDTOs 
       |> Seq.map toDomain 
       |> List.ofSeq
+      |> traverseResultA id
+     

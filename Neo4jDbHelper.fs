@@ -48,6 +48,7 @@ let getPathResult (direction: PathDirection) (pathResultSeq: PathDTOData) =
         ) "" relationships 
     ) 
     |> List.ofSeq
+    |> List.distinct
 
 let getTreeFileRelationshipInfo (simulationNode: Node) (treeFileNode: Node) =
     let treeFileRelationshipInfo: RelationShipInfo = 
