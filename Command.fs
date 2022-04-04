@@ -25,8 +25,8 @@ let interpret program =
             | :? DbInstruction<Program<_>> as inst -> interpretDbInstruction loop inst
             | :? FileIOInstruction<Program<_>> as inst -> interpretFileIOInstruction loop inst
             | _ -> failwithf $"unknown instruction type {inst.GetType()}"
-        | NotYetDone p ->
-            loop (p() |> asyncResult.Return)
+//        | NotYetDone p ->
+//            loop (p() |> asyncResult.Return)
         | Stop value ->
             value |> asyncResult.Return
       }

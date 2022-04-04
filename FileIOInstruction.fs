@@ -116,9 +116,14 @@ module Shell =
     | NoAction ->
         program.Zero()
   let copyDirectory copyDirectoryInput =
+//    program {
+//      let! decision = Pure.copyDirectory copyDirectoryInput
+//      do! handleDecision decision
+//    }
+    let _, destDirPath, _ = copyDirectoryInput
     program {
-      let! decision = Pure.copyDirectory copyDirectoryInput
-      do! handleDecision decision
+      do! createDirectory destDirPath
+      do! copyDirectory copyDirectoryInput
     }
   let copyFile copyFileInput =
     program {

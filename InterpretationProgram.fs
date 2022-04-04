@@ -44,21 +44,21 @@ let asyncResult = AsyncResultBuilder()
 
 type Program<'a> =
   | Instruction of IInstruction<Program<'a>>
-  | NotYetDone of (unit -> Program<'a>)
+//  | NotYetDone of (unit -> Program<'a>)
   | Stop of 'a
   
 let rec bind f program =
   match program with
   | Instruction inst ->
       inst.Map (bind f) |> Instruction
-  | NotYetDone work ->
-      (fun () -> bind f (work()) ) |> NotYetDone
+//  | NotYetDone work ->
+//      (fun () -> bind f (work()) ) |> NotYetDone
   | Stop x ->
       f x
 let combine expr1 expr2 =
       expr1 |> bind (fun () -> expr2)
 
-let delay func = NotYetDone (fun () -> func())
+//let delay func = NotYetDone (fun () -> func())
 
 /// Return the final value
 let result value = Stop value
@@ -74,12 +74,12 @@ let rec catch expr =
         result (Ok cont)
       | Error exn ->
         result (Error exn)
-    | NotYetDone work ->
-        NotYetDone (fun () ->
-            let res = try Ok(work()) with | exn -> exn |> result |> Error
-            match res with
-            | Ok cont -> catch cont 
-            | Error exn -> result (Error exn))
+//    | NotYetDone work ->
+//        NotYetDone (fun () ->
+//            let res = try Ok(work()) with | exn -> exn |> result |> Error
+//            match res with
+//            | Ok cont -> catch cont 
+//            | Error exn -> result (Error exn))
     | Stop _ ->
       result (Ok expr)
     
